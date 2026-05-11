@@ -10,10 +10,14 @@ odsdatabase:
   port: 1433
 
 saltLicenseServer:
-  host: 172.1.1.3
+  # host: 172.1.1.3
+   host: 20.219.84.197   
+   port: 29000  
 
 ldapServer:
-  host: 10.0.14.33
+  # host: 10.0.14.33
+  host: 20.219.84.197              
+  port: 389
 
 storage:
   secret:
