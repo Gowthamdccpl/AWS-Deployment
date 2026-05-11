@@ -115,6 +115,10 @@ jobs:
               namespace="$SHARED_NAMESPACE"
             fi
 
+            if [[ "$chart_dir" == "opcenter-core-config" ]]; then
+              release_name="dev-opcenter-config"
+            fi
+
             if [[ "$chart_dir" == "opcenter-core-config" || "$chart_dir" == "opcenter-core-dbupdate" ]]; then
               if [[ -n "$OPCENTER_DB_PASSWORD" ]]; then
                 db_secret_values_file="$RUNNER_TEMP/${chart_dir}-db-secret-values.yaml"
