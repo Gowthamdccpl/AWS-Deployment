@@ -73,6 +73,7 @@
 # #dbupdateArgs: "\"/dbupdate\", \"-ld\", \"-lco\", \"-gws\", \"-container\", "
 
 cloudProvider: "AWS"
+metadataPVC: opcenter-metadata-pvc-dev-opcenter
 
 # MUST be create for fresh DB
 #updateType: create

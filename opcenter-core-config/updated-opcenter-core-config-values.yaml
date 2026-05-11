@@ -22,7 +22,7 @@ config:
   metadataPath: dev-opcenter
   StorageClass: opcenter-sc
   secretName: opcfsxsecrets
-  metadataPVC: opcenter-metadata-pvc-shared
+  metadataPVC: opcenter-metadata-pvc-dev-opcenter
 
 connectMOM:
   enabled: false

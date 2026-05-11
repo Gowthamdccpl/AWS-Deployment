@@ -21,6 +21,7 @@ ldapServer:
   port: 389
 
 storage:
+  existingClaim: opcenter-metadata-pvc-shared
   secret:
     create: false
   fileShare: "//fs-0f9276b41bf18abde.opcenter.com/share"

@@ -5,6 +5,10 @@
 # cloudProvider: Azure, AWS
 cloudProvider: "AWS"
 
+config:
+  # metadataPVC: Existing metadata PVC to use. Leave empty to create opcenter-metadata-pvc-<namespace>.
+  metadataPVC: ""
+
 # licensing: the ability to assign licenses to a whole suite of applications, and not to a single application instance.
 licensing:
     userLicenseAllocation: -1

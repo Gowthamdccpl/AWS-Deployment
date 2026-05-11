@@ -1,6 +1,6 @@
 # AWS: PV and PVC at the Shared level
 # Azure: PV and PVC at the Factory level
-{{ if eq .Values.cloudProvider "Azure" }}
+{{ if and (eq .Values.cloudProvider "Azure") (not .Values.config.metadataPVC) }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -13,7 +13,7 @@ spec:
     requests:
       storage: 5Gi
 {{ end }}
-{{ if eq .Values.cloudProvider "AWS" }}
+{{ if and (eq .Values.cloudProvider "AWS") (not .Values.config.metadataPVC) }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

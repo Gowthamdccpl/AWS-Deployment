@@ -1,6 +1,6 @@
 # Copyright Siemens 2022
 # AWS: PV for AWS (with a Fsx fileshare service)
-{{ if eq .Values.cloudProvider "AWS" }}
+{{ if and (eq .Values.cloudProvider "AWS") (not .Values.config.metadataPVC) }}
 apiVersion: v1
 kind: PersistentVolume
 metadata:

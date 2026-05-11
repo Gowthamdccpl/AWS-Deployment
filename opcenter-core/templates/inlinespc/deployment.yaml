@@ -80,7 +80,7 @@ spec:
       volumes:
         - name: opcenter-metadata
           persistentVolumeClaim:
-            claimName: opcenter-metadata-pvc-{{ .Release.Namespace }}
+            claimName: {{ default (printf "opcenter-metadata-pvc-%s" .Release.Namespace) .Values.config.metadataPVC }}
       {{- if .Values.inlinespc.extraVolumes -}}
         {{ toYaml .Values.inlinespc.extraVolumes | nindent 8 }}
       {{- end }}

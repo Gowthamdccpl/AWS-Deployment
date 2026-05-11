@@ -18,6 +18,9 @@ sourcePath: ""
 # sharedNamespace: The name of the Opcenter Core shared namespace. In most cases, it should be left to its default, shared.
 sharedNamespace: shared
 
+# metadataPVC: Existing metadata PVC to mount. Leave empty to use opcenter-metadata-pvc-<namespace>.
+metadataPVC: ""
+
 # configuration: Site properties from the SiteInfo.mdb can be overriden here. These are equivalent to what is seen in Management Studio.
 configuration: 
   totalNumOfSites: 1

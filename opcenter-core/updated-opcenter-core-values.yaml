@@ -15,6 +15,7 @@ storage:
 config:
   StorageClass: opcenter-sc
   secretName: opcfsxsecrets
+  metadataPVC: opcenter-metadata-pvc-dev-opcenter
 
 connectMOM:
   enabled: false

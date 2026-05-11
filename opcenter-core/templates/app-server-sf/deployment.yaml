@@ -127,7 +127,7 @@ spec:
       {{- if eq .Values.cloudProvider "Azure" }}
         - name: opcenter-metadata
           persistentVolumeClaim:
-            claimName: opcenter-metadata-pvc-{{ .Release.Namespace }}
+            claimName: {{ default (printf "opcenter-metadata-pvc-%s" .Release.Namespace) .Values.config.metadataPVC }}
       {{ end }}
       {{- if .Values.appServerSf.extraVolumes -}}
         {{ toYaml .Values.appServerSf.extraVolumes | nindent 8 }}

@@ -10,6 +10,8 @@ cloudProvider: AWS
 config:
   # metadataPath: The path within the File Share that this deployment should use for its files (metadata, WCF services, portal files, etc.). Should have the form: factory\revision
   metadataPath: dev-opcenter
+  # metadataPVC: Existing metadata PVC to mount. Leave empty to use opcenter-metadata-pvc-<namespace>.
+  metadataPVC: ""
   # sharedNamespace: The name of the Opcenter Core shared namespace. In most cases, it should be left to its default, shared.
   sharedNamespace: shared
 

@@ -31,6 +31,8 @@ ldapServer:
   
 # storage: Configuration for the metadata file share.
 storage:
+  # existingClaim: Existing metadata PVC to use. Leave empty to create the shared PVC.
+  existingClaim: ""
   # fileShare: AWS only. The volumeHandle for the PV.
   fileShare: opcenter-metadata
   # secret: Azure only. A secret will be created and then used by opcenter-core-config to set up the Azure-based storage.
