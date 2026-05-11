@@ -111,6 +111,7 @@ jobs:
             fi
 
             if [[ "$chart_dir" == "opcenter-core-shared" ]]; then
+              release_name="opcenter-shared"
               namespace="$SHARED_NAMESPACE"
             fi
 
@@ -159,7 +160,7 @@ jobs:
             helm lint "$chart_dir" --values "$values_file"
 
             helm upgrade --install "$release_name" "$chart_dir" \
-              --namespace "$namespace" \
+              -n "$namespace" \
               --create-namespace \
               --values "$values_file" \
               "${extra_values_args[@]}" \
