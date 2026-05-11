@@ -1,0 +1,30 @@
+# Copyright Siemens 2022
+# AWS: PV and PVC at the Shared level (with a file-share-host service)
+# Azure: PV and PVC at the Factory level
+{{ if eq .Values.cloudProvider "Azure" }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: opcenter-metadata-pv-{{ .Release.Namespace }}
+  labels:
+    opcenter-use: metadata
+spec:
+  capacity:
+    storage: 5Gi
+  volumeMode: Filesystem
+  persistentVolumeReclaimPolicy: Retain
+  accessModes:
+    - ReadWriteMany
+  azureFile:
+    secretName: opcenter-storage-secret
+    secretNamespace: {{ .Values.sharedNamespace }}
+    shareName: {{ .Values.storage.fileShare }}
+    readOnly: false
+  mountOptions:
+  - dir_mode=0755
+  - file_mode=0755
+  - uid=1000
+  - gid=1000
+  - mfsymlinks
+  - nobrl
+{{ end }}

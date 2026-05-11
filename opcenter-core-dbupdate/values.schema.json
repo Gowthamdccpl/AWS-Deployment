@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "required": [
+    "cloudProvider",
+    "updateType",
+    "image",
+    "metadataPath",
+    "stagingPath"
+  ],
+  "properties": {
+    "updateType": {
+      "type": "string",
+      "enum": ["create","metadata-only", "metadata-only-forced", "metadata-and-generate", "metadata-and-generate-forced", "metadata-and-generate-without-loadCamstarObjects", "load-camstar-objects", "load-dictionaries", "load-dictionaries-reloadAll"]
+    },
+    "cloudProvider": {
+      "type": "string",
+      "enum": ["Azure", "AWS"]
+    },
+    "image": {
+      "type": "object",
+      "required": [
+        "repository"
+      ],
+      "properties": {
+        "repository": {
+          "type": "string"
+        }
+      }
+    },
+    "metadataPath": {
+      "type": "string"
+    },
+    "stagingPath": {
+      "type": "string"
+    }
+  }
+}

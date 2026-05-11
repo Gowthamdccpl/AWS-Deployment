@@ -1,0 +1,52 @@
+# Copyright Siemens 2024
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opcenter-config
+data:
+  OPCORE_DB_HOST: {{ .Values.database.host }}
+  OPCORE_DB_NAME: {{ .Values.database.name }}
+  OPCORE_DB_SCHEMA: {{ .Values.database.schema }}
+  OPCORE_DB_PORT: "{{ .Values.database.port }}"
+  OPCORE_USER_LICENSE_ALLOCATION: "{{ .Values.licensing.userLicenseAllocation }}"
+  OPCORE_DB_TYPE: {{ .Values.database.type }}
+  OPCORE_DOMAIN_NAME: {{ .Values.defaultDomain }}
+  OPCORE_DB_MAXROWSETSIZE: "{{ .Values.database.maxRowsetSize }}"
+  OPCORE_LDAP_CERTIFICATES_PATH: C:\opcenter-metadata\{{ .Values.ldap.certificatePath }}
+  OPCORE_MIO_CERTIFICATES_PATH: C:\opcenter-metadata\{{ .Values.connectMOM.certificatePath }}
+  {{ if .Values.connectMOM.serverName -}}
+  OPCORE_MIO_SERVER_NAME: {{ .Values.connectMOM.serverName}}
+  {{ end }}
+  {{ if .Values.connectMOM.serverIP -}}
+  OPCORE_MIO_SERVER_IP: {{ .Values.connectMOM.serverIP}}
+  {{ end }}
+  {{ if .Values.connectMOM.username -}}
+  OPCORE_MIO_USER: {{ .Values.connectMOM.username}}
+  {{ end }}
+  {{ if .Values.connectMOM.useSSL -}}
+  OPCORE_MIO_USESSL: "{{ .Values.connectMOM.useSSL}}"
+  {{ end }}
+  {{ if .Values.connectMOM.clientName -}}
+  OPCORE_MIO_CLIENTNAME: {{ .Values.connectMOM.clientName}}
+  {{ end }}
+  {{ if .Values.inlinespc.licenseServerUrl -}}
+  OPCORE_LICENSE_SERVER_URL: {{ .Values.inlinespc.licenseServerUrl}}
+  {{ end }}
+  OPCORE_AUTHENTICATION_SERVICE_URL: {{ .Values.services.authenticationServiceUrl }}
+  OPCORE_AUTHORIZATION_SERVICE_URL: {{ .Values.services.authorizationServiceUrl }}
+  {{ if .Values.connectSAPBO.serverName -}}
+  OPCORE_SAPBO_SERVER_NAME: {{ .Values.connectSAPBO.serverName}}
+  {{ end }}
+  {{ if .Values.connectSAPBO.serverIP -}}
+  OPCORE_SAPBO_SERVER_IP: {{ .Values.connectSAPBO.serverIP}}
+  {{ end }}
+  {{ if .Values.connectSAPBO.username -}}
+  OPCORE_SAPBO_USERNAME: {{ .Values.connectSAPBO.username}}
+  {{ end }}
+  {{ if .Values.connectSAPBO.password -}}
+  OPCORE_SAPBO_PASSWORD: {{ .Values.connectSAPBO.password}}
+  {{ end }}
+  {{ if .Values.connectSAPBO.certPassword -}}
+  OPCORE_SAPBO_CERTPASSWORD: {{ .Values.connectSAPBO.certPassword}}
+  {{ end }}
+  OPCORE_SAPBO_CERTIFICATES_PATH: C:\opcenter-metadata\{{ .Values.connectSAPBO.certificatePath }}

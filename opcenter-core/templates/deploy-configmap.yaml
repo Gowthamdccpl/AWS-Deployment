@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opcenter-deploy-config
+data:
+  OPCORE_METADATA_PATH: C:\opcenter-metadata\{{ .Values.config.metadataPath }}
+ 

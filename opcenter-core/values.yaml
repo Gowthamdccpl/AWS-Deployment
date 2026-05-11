@@ -1,0 +1,504 @@
+# Copyright Siemens 2022
+# Default values for opcenter-core.
+
+nameOverride: ""
+fullnameOverride: ""
+
+# cloudProvider: Azure, AWS
+cloudProvider: AWS
+
+config:
+  # metadataPath: The path within the File Share that this deployment should use for its files (metadata, WCF services, portal files, etc.). Should have the form: factory\revision
+  metadataPath: dev-opcenter
+  # sharedNamespace: The name of the Opcenter Core shared namespace. In most cases, it should be left to its default, shared.
+  sharedNamespace: shared
+
+appServer:
+  image:
+    # repository: The container registry location for the app server image. Format: registry/image. Example: myregistry.azurecr.io/app-server
+    repository: myregistry.amazonaws.com/app-server
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion. Example "8.7"
+    tag: "8.8"
+
+  imagePullSecrets: []
+
+  # connectMOM: If interfacing with Connect MOM, a different image is used, along with its configuration. Instead of using the app-server image, we will use app-server-with-connect.
+  connectMOM:
+    # enabled: If Connect MOM is present, true. Otherwise, false.
+    enabled: false
+    image:
+      # repository: The container registry location for the app server (with connect) image. Format: registry/image. Example: myregistry.azurecr.io/app-server-with-connect
+      repository: myregistry.amazonaws.com/app-server-with-connect
+      pullPolicy: IfNotPresent
+      # Overrides the image tag whose default is the chart appVersion. Example: "8.7"
+      tag: "8.8"
+    # mountPassphrase and mountPassword: If true, secrets as environment variables will be sent into the app server pod. If using Connect MOM, these should be true unless the secrets are being created manually or by a system policy.
+    mountPassphrase: true
+    mountPassword: true
+
+  # replicaCount: For the app server. If ConnectMOM is present, and "asynchronous" transactions are used, this must be 1.
+  replicaCount: 1
+
+  # autoScaling: For the app server pods.
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 100
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+
+  serviceAccount:
+    # Specifies whether a service account should be created
+    create: true
+    # Annotations to add to the service account
+    annotations: {}
+
+  podAnnotations: {}
+  
+  nodeSelector:
+    kubernetes.io/os: windows
+    node.kubernetes.io/windows-build: "10.0.20348"
+  
+
+  podLabels: {}
+
+  podSecurityContext: {}
+    # fsGroup: 2000
+
+  securityContext: {}
+    # capabilities:
+    #   drop:
+    #   - ALL
+    # readOnlyRootFilesystem: true
+    # runAsNonRoot: true
+    # runAsUser: 1000
+
+  resources: {}
+
+  extraEnv: []
+  extraEnvFrom: []
+  extraVolumes: []
+  extraVolumeMounts: []
+
+  tolerations:
+    - key: "vpc.amazonaws.com/PrivateIPv4Address"
+      operator: "Exists"
+      effect: "NoSchedule"
+
+  affinity: {}
+
+  service:
+    type: ClusterIP
+    port: 80
+
+  # App Server Ingress Resource
+  ingress:
+    enabled: true
+    className: nginx
+    annotations: {}
+    sslRedirect: false
+    forceAffinity: true
+    clusterIssuer: ""
+    host: "app.dccpl-opcenter-cloud.com"
+    tls: false
+    maxBodySize: 15m
+
+  ipIngress:
+    enabled: false
+    className: nginx
+    annotations: {}
+
+# connectServiceAccount: Configuration for service account credentials.
+  connectServiceAccount:
+    enabled: false
+    username: ""
+    password: ""
+    
+# connectRestApi: Configuration for rest api credentials.
+  connectRestApi:
+    username: ""
+    password: ""
+
+appServerSf:
+  enabled: false
+  image:
+    # repository: The container registry location for the app server image. Format: registry/image. Example: myregistry.azurecr.io/app-server
+    repository: myregistry.amazonaws.com/app-server
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion. Example "8.7"
+    tag: "8.8"
+
+  imagePullSecrets: []
+  
+  # connectMOM: If interfacing with Connect MOM, a different image is used, along with its configuration. Instead of using the app-server image, we will use app-server-with-connect.
+  connectMOM:
+    # enabled: If Connect MOM is present, true. Otherwise, false.
+    enabled: false
+    image:
+      # repository: The container registry location for the app server (with connect) image. Format: registry/image. Example: myregistry.azurecr.io/app-server-with-connect
+      repository: myregistry.amazonaws.com/app-server-with-connect
+      pullPolicy: IfNotPresent
+      # Overrides the image tag whose default is the chart appVersion. Example: "8.7"
+      tag: "8.8"
+    # mountPassphrase and mountPassword: If true, secrets as environment variables will be sent into the app server pod. If using Connect MOM, these should be true unless the secrets are being created manually or by a system policy.
+    mountPassphrase: true
+    mountPassword: true
+
+  # replicaCount: For the app server. If ConnectMOM is present, and "asynchronous" transactions are used, this must be 1.
+  replicaCount: 1
+
+  # autoScaling: For the app server pods.
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 100
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+
+  serviceAccount:
+    # Specifies whether a service account should be created
+    create: true
+    # Annotations to add to the service account
+    annotations: {}
+
+  podAnnotations: {}
+  
+  nodeSelector: {}
+    #opcenter-node-type: appserver
+
+  podLabels: {}
+
+  podSecurityContext: {}
+    # fsGroup: 2000
+
+  securityContext: {}
+    # capabilities:
+    #   drop:
+    #   - ALL
+    # readOnlyRootFilesystem: true
+    # runAsNonRoot: true
+    # runAsUser: 1000
+
+  resources: {}
+
+  extraEnv: []
+  extraEnvFrom: []
+  extraVolumes: []
+  extraVolumeMounts: []
+
+  tolerations: []
+
+  affinity: {}
+
+  service:
+    type: ClusterIP
+    port: 80
+
+  # App Server Ingress Resource
+  ingress:
+    enabled: true
+    className: nginx
+    annotations: {}
+    sslRedirect: false
+    forceAffinity: true
+    clusterIssuer: ""
+    host: ""
+    tls: false
+    maxBodySize: 15m
+
+  ipIngress:
+    enabled: false
+    className: nginx
+    annotations: {}
+
+portal:
+  image:
+    repository: myregistry.amazonaws.com/portal
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "8.8"
+
+  imagePullSecrets: []
+
+  replicaCount: 1
+
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 100
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+
+  serviceAccount:
+    # Specifies whether a service account should be created
+    create: true
+    # Annotations to add to the service account
+    annotations: {}
+
+  podAnnotations: {}
+  
+  nodeSelector:
+    kubernetes.io/os: windows
+    node.kubernetes.io/windows-build: "10.0.20348"
+
+  podLabels: {}
+
+  podSecurityContext: {}
+    # fsGroup: 2000
+  resources:
+    limits:
+      memory: 8000Mi
+      cpu: 2500m
+    requests:
+      memory: 4700Mi
+      cpu: 1000m
+
+  securityContext: {}
+    # capabilities:
+    #   drop:
+    #   - ALL
+    # readOnlyRootFilesystem: true
+    # runAsNonRoot: true
+    # runAsUser: 1000
+  extraEnv:
+    - name: OPCORE_IsContainer
+      value: "true"
+    - name: OPCORE_TelemetryAppName
+      value: Portal
+    - name: OPCORE_EnableTelemetry
+      value: "false"
+    - name: OPCORE_TelemetryConnectionString
+      value: ""
+    - name: OPCORE_TelemetryDLLErrorLogging
+      value: "false"
+    - name: OPCORE_TelemetryDLLLogFolderPath
+      value: ""
+    - name: OPCORE_WCF_TelemetryAppName
+      value: WCF
+    - name: OPCORE_WCF_EnableTelemetry
+      value: "false"
+    - name: OPCORE_WCF_TelemetryConnectionString
+      value: ""
+    - name: OPCORE_WCF_TelemetryDLLErrorLogging
+      value: "false"
+    - name: OPCORE_WCF_TelemetryDLLLogFolderPath
+      value: ""
+  extraEnvFrom: []
+  extraVolumes: []
+  extraVolumeMounts: []
+
+  tolerations: 
+    - key: "vpc.amazonaws.com/PrivateIPv4Address"
+      operator: "Exists"
+      effect: "NoSchedule"
+
+
+  affinity: {}
+
+  service:
+    type: ClusterIP
+    port: 80
+
+  # Portal Ingress Resource
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/proxy-body-size: 16m
+      nginx.ingress.kubernetes.io/proxy-connect-timeout: "3600"
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    sslRedirect: false
+    forceAffinity: true
+    clusterIssuer: ""
+    host: portal.dccpl-opcenter-cloud.com
+    tls: false
+    maxBodySize: 15m
+
+notificationService:
+  image:
+    repository: myregistry.amazonaws.com/notification-service
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "8.8"
+
+  imagePullSecrets: []
+
+  replicaCount: 1
+
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 100
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+
+  serviceAccount:
+    # Specifies whether a service account should be created
+    create: true
+    # Annotations to add to the service account
+    annotations: {}
+
+  podAnnotations: {}
+  
+  nodeSelectors: {}
+
+  podLabels: {}
+
+  podSecurityContext: {}
+    # fsGroup: 2000
+
+  securityContext: {}
+    # capabilities:
+    #   drop:
+    #   - ALL
+    # readOnlyRootFilesystem: true
+    # runAsNonRoot: true
+    # runAsUser: 1000
+
+  extraEnv: []
+  extraEnvFrom: []
+  extraVolumes: []
+  extraVolumeMounts: []
+
+  tolerations: []
+
+  affinity: {}
+  
+  resources:
+    limits:
+      memory: 500Mi
+      cpu: 100m
+    requests:
+      memory: 100Mi
+      cpu: 10m
+
+securityServices:
+  image:
+    repository: myregistry.amazonaws.com/security-services
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "8.8"
+
+  imagePullSecrets: []
+
+  replicaCount: 1
+
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 100
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+
+  serviceAccount:
+    # Specifies whether a service account should be created
+    create: true
+    # Annotations to add to the service account
+    annotations: {}
+
+  podAnnotations: {}
+  
+  nodeSelectors:
+    kubernetes.io/os: windows
+    node.kubernetes.io/windows-build: "10.0.20348"
+
+  podLabels: {}
+
+  podSecurityContext: {}
+    # fsGroup: 2000
+
+  securityContext: {}
+    # capabilities:
+    #   drop:
+    #   - ALL
+    # readOnlyRootFilesystem: true
+    # runAsNonRoot: true
+    # runAsUser: 1000
+
+  extraEnv:
+    - name: OPCORE_IsContainer
+      value: "true"
+    - name: OPCORE_TelemetryAppName
+      value: Security Services
+    - name: OPCORE_EnableTelemetry
+      value: "false"
+    - name: OPCORE_TelemetryConnectionString
+      value: ""
+    - name: OPCORE_TelemetryDLLErrorLogging
+      value: "false"
+    - name: OPCORE_TelemetryDLLLogFolderPath
+      value: ""
+  extraEnvFrom: []
+  extraVolumes: []
+  extraVolumeMounts: []
+
+  tolerations: 
+    - key: "vpc.amazonaws.com/PrivateIPv4Address"
+      operator: "Exists"
+      effect: "NoSchedule"
+
+  affinity: {}
+
+  service:
+    type: ClusterIP
+    port: 80
+
+inlinespc:
+  # enabled: If inlinespc is present, true. Otherwise, false.
+  enabled: false
+  image:
+    repository: myregistry.amazonaws.com/inlinespc
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "8.8"
+
+  imagePullSecrets: []
+
+  replicaCount: 1
+
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 100
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+
+  serviceAccount:
+    # Specifies whether a service account should be created
+    create: true
+    # Annotations to add to the service account
+    annotations: {}
+
+  podAnnotations: {}
+  
+  nodeSelectors: {}
+
+  podLabels: {}
+
+  podSecurityContext: {}
+    # fsGroup: 2000
+
+  securityContext: {}
+    # capabilities:
+    #   drop:
+    #   - ALL
+    # readOnlyRootFilesystem: true
+    # runAsNonRoot: true
+    # runAsUser: 1000
+
+  resources: {}
+
+  extraEnv: []
+  extraEnvFrom: []
+  extraVolumes: []
+  extraVolumeMounts: []
+
+  tolerations: []
+
+  affinity: {}
+  
+  service:
+    type: ClusterIP
+    port: 80

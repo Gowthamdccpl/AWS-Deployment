@@ -1,0 +1,100 @@
+# Copyright Siemens 2022
+
+# cloudProvider: Azure, AWS
+cloudProvider: "AWS"
+
+# updateType: create, metadata-only, metadata-and-generate
+updateType: create 
+
+# metadataPath: Required. The path within the File Share that this deployment should use for its file output (metadata, WCF services, portal files, etc.). Should have the form: factory\revision
+metadataPath: ""
+
+# stagingPath: Required. The path within the File Share to pull new files from (eg the new MDB). Typically, this is a "staging" directory under the factory directory: factory123\staging
+stagingPath: ""
+
+# sourcePath: Optional. If set, all files from this folder will be copied into metadataPath prior to running the job. This is ued for an upgrade. Should have the form: factory\revision
+sourcePath: ""
+
+# sharedNamespace: The name of the Opcenter Core shared namespace. In most cases, it should be left to its default, shared.
+sharedNamespace: shared
+
+# configuration: Site properties from the SiteInfo.mdb can be overriden here. These are equivalent to what is seen in Management Studio.
+configuration: 
+  totalNumOfSites: 1
+  warningThreshold: 50000
+  
+  # siteIdentifier: A Numeric value given to this site. Site Identifiers start at 1 and increment for each new site.
+  siteIdentifier: 1
+  
+  # siteName: The name of the site. For example: Site1
+  siteName: ""
+  
+  # defaultUser: If you want to override the default 'camstaradmin' user with a different username (during DB Create only).
+  defaultUser: 
+
+  # scriptTimeout: If you want override default 300sec with new value for script timeout.
+  scriptTimeout:
+  
+  # odsDatabase: Only used for updateType=create. If creating an ODS database, the connection information must be supplied here. 
+odsDatabase:
+  enabled: false
+  # type: SQLServer, Oracle
+  type: SQLServer
+  # createSecret: Create schema, username, and password as secret. If false secrets will need created manually
+  createSecret: true
+  
+  # database credentials.
+  host: ods-db.shared.svc.cluster.local
+  schema: ""
+  username: ""
+  password: ""
+  name: ""
+  
+  # port: Database listener port. Typically 1433 for SQL Server and 1521 for Oracle.
+  port: 1433
+
+image:
+  # repository: The container registry location for the app server image. Format: registry/image. Example: myregistry.azurecr.io/app-server
+  repository: myregistry.amazonaws.com/dbupdate
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion. Example "8.7"
+  tag: ""
+
+# Most of the properies beyond this point will not need to be changed except on request by Siemens Support  
+ 
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 2000Mi
+  requests:
+    cpu: 250m
+    memory: 2000Mi
+
+extraEnv: []
+extraEnvFrom: []
+extraVolumes: []
+extraVolumeMounts: []

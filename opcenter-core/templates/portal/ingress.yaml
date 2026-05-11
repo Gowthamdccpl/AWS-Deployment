@@ -1,0 +1,62 @@
+{{- if .Values.portal.ingress.enabled -}}
+# Copyright Siemens 2022
+{{- $svcPort := .Values.portal.service.port -}}
+{{- if and .Values.portal.ingress.className (not (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion)) }}
+  {{- if not (hasKey .Values.portal.ingress.annotations "kubernetes.io/ingress.class") }}
+  {{- $_ := set .Values.portal.ingress.annotations "kubernetes.io/ingress.class" .Values.portal.ingress.className}}
+  {{- end }}
+{{- end }}
+{{ if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion -}}
+apiVersion: networking.k8s.io/v1
+{{- else if semverCompare ">=1.14-0" .Capabilities.KubeVersion.GitVersion -}}
+apiVersion: networking.k8s.io/v1beta1
+{{ else -}}
+apiVersion: extensions/v1beta1
+{{ end}}
+kind: Ingress
+metadata:
+  name: portal-ingress
+  labels:
+    {{- include "opcenter-core.labels" . | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "{{- .Values.portal.ingress.sslRedirect }}"
+    {{- if .Values.portal.ingress.forceAffinity}}
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    {{- end}}
+    nginx.ingress.kubernetes.io/affinity-mode: "persistent"
+    {{- if .Values.portal.ingress.clusterIssuer}}
+    cert-manager.io/cluster-issuer: {{ .Values.portal.ingress.clusterIssuer}}
+    {{- end}}
+  {{- with .Values.portal.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if and .Values.portal.ingress.className (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
+  ingressClassName: {{ .Values.portal.ingress.className }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.portal.ingress.host }}
+      http:
+        paths:
+          - path: /
+            {{- if (semverCompare ">=1.18-0" $.Capabilities.KubeVersion.GitVersion) }}
+            pathType: ImplementationSpecific
+            {{- end }}
+            backend:
+              {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
+              service:
+                name: portal
+                port:
+                  number: {{ $svcPort }}
+              {{- else }}
+              serviceName: portal
+              servicePort: {{ $svcPort }}
+              {{- end }}
+  {{- if .Values.portal.ingress.tls }}
+  tls:
+    - hosts:
+        - {{ .Values.portal.ingress.host }}
+      secretName: opcenter-portal-tls
+  {{- end }}
+{{- end }}

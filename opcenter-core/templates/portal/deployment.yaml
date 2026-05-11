@@ -1,0 +1,152 @@
+# Copyright Siemens 2022
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: portal
+  labels:
+    {{- include "opcenter-core.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.portal.autoscaling.enabled }}
+  replicas: {{ .Values.portal.replicaCount }}
+  {{- end }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 50%
+  selector:
+    matchLabels:
+      {{- include "opcenter-core.portal.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        prometheus.io/path: /metrics
+        prometheus.io/port: "50505"
+        prometheus.io/scheme: http
+        prometheus.io/scrape: "true"
+        {{- with .Values.portal.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "opcenter-core.portal.selectorLabels" . | nindent 8 }}
+        {{- with .Values.portal.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.portal.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: portal
+      securityContext:
+        {{- toYaml .Values.portal.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: fix-appsettings
+          image: mcr.microsoft.com/windows/servercore:ltsc2022
+          command: ["powershell", "-Command"]
+          args:
+            - |
+              $path = 'C:\opcenter-metadata\dev-opcenter\portal\appsettings.json'
+              if (Test-Path $path) {
+                (Get-Content $path) `
+                  -replace '"Host": "localhost"', '"Host": "security-services"' `
+                  -replace '"Port": 443', '"Port": 80' `
+                  -replace '"UseSSL": true', '"UseSSL": false' |
+                Set-Content $path
+              }
+          volumeMounts:
+            - name: opcenter-metadata
+              mountPath: C:\opcenter-metadata
+      containers:
+        - name: portal
+          securityContext:
+            {{- toYaml .Values.portal.securityContext | nindent 12 }}
+          image: "{{ .Values.portal.image.repository }}:{{ .Values.portal.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.portal.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          startupProbe:
+            httpGet:
+              path: "/CamstarPortal"
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 20
+          livenessProbe:
+            httpGet:
+              path: "/CamstarPortal"
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          env:
+            - name: OPCORE_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: opcenter-db-secrets
+                  key: OPCORE_DB_PASSWORD
+            - name: OPCORE_DB_SCHEMA
+              valueFrom:
+                secretKeyRef:
+                  name: opcenter-db-secrets
+                  key: OPCORE_DB_SCHEMA
+            - name: OPCORE_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: opcenter-db-secrets
+                  key: OPCORE_DB_USERNAME
+            - name: OPCORE_CONTAINER_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPCORE_CONTAINER_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            {{- if .Values.portal.extraEnv -}}
+              {{ toYaml .Values.portal.extraEnv | nindent 12 }}
+            {{- end }}
+          envFrom:
+            - configMapRef:
+                name: opcenter-config
+            - configMapRef:
+                name: opcenter-deploy-config
+            {{- if .Values.portal.extraEnvFrom -}}
+              {{ toYaml .Values.portal.extraEnvFrom | nindent 12 }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.portal.resources | nindent 12 }}
+          volumeMounts:
+            - name: opcenter-metadata
+              mountPath: \opcenter-metadata
+            - name: opcenter-metadata
+              mountPath: \CamstarPortal\User
+              # subPath: {{ .Values.config.metadataPath }}\portal\User
+              subPath: {{ .Values.config.metadataPath }}portal\User
+          {{- if .Values.portal.extraVolumeMounts -}}
+            {{ toYaml .Values.portal.extraVolumeMounts | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: opcenter-metadata
+          persistentVolumeClaim:
+            claimName: opcenter-metadata-pvc-{{ .Release.Namespace }}
+      {{- if .Values.portal.extraVolumes -}}
+        {{ toYaml .Values.portal.extraVolumes | nindent 8 }}
+      {{- end }}
+      nodeSelector:
+        "kubernetes.io/os": windows
+        {{- if eq .Values.cloudProvider "Azure" }}
+        "kubernetes.azure.com/os-sku": Windows2022
+        {{- end }}
+        {{- with .Values.portal.nodeSelectors }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.portal.affinity }}
+      affinity:
+       {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.portal.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

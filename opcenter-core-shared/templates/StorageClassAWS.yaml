@@ -1,0 +1,22 @@
+{{- if eq .Values.cloudProvider "AWS" }}
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ .Values.config.StorageClass }}
+provisioner: smb.csi.k8s.io
+parameters:
+  source: {{ .Values.storage.fileShare }} # Use the FQDN provided by Amazon FSx 
+  # if csi.storage.k8s.io/provisioner-secret is provided, will create a sub directory
+  # with PV name under source
+  csi.storage.k8s.io/provisioner-secret-name: {{ .Values.config.secretName }}
+  csi.storage.k8s.io/provisioner-secret-namespace: shared
+  csi.storage.k8s.io/node-stage-secret-name: {{ .Values.config.secretName }}
+  csi.storage.k8s.io/node-stage-secret-namespace: shared
+reclaimPolicy: Retain  # available values: Delete, Retain
+volumeBindingMode: Immediate
+mountOptions:
+  - dir_mode=0777
+  - file_mode=0777
+  - uid=1001
+  - gid=1001
+{{ end }}

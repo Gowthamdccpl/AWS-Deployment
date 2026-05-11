@@ -1,0 +1,32 @@
+cloudProvider: "AWS"
+
+database:
+  host: 100.26.162.7
+  port: 1433
+
+odsdatabase:
+  enabled: true
+  host: 100.26.162.7
+  port: 1433
+
+saltLicenseServer:
+  host: 172.1.1.3
+
+ldapServer:
+  host: 10.0.14.33
+
+storage:
+  secret:
+    create: false
+  fileShare: "//fs-0f9276b41bf18abde.opcenter.com/share"
+
+config:
+  StorageClass: opcenter-sc
+  secretName: opcfsxsecrets
+
+Fsx:
+  createSecret: false
+  username: fsxsvcuser
+  password: ""
+  domain: opcenter.com
+  

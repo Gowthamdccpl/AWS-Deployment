@@ -1,0 +1,83 @@
+nameOverride: ""
+fullnameOverride: ""
+
+cloudProvider: AWS
+namespace: dev-opcenter
+
+database:
+  host: 100.26.162.7
+  port: 1433
+  username: admin
+  password: ""
+  name: opcenter_new
+  schema: dbo
+  maxRowsetSize: 15000
+
+defaultDomain: "opcenter.com"
+
+storage:
+  fileShare: "//fs-0f9276b41bf18abde.opcenter.com/share"
+
+config:
+  metadataPath: dev-opcenter
+  StorageClass: opcenter-sc
+  secretName: opcfsxsecrets
+  metadataPVC: opcenter-metadata-pvc-shared
+
+connectMOM:
+  enabled: false
+  certificatePath: "certificates/connectMOM"
+  passphrase: "Passphrase"
+  username: ""
+  password: ""
+  useSSL: true
+  serverName: ""
+  serverIP: ""
+  clientName: ""
+  createSecret: true
+
+connectSAPBO:
+  serverName: ""
+  serverIP: ""
+  certificatePath: "certificates/connectSAPBO"
+  certPassword: ""
+  username: ""
+  password: ""
+
+appServer:
+  extraEnv:
+    - name: OPCORE_METADATA_PATH
+      value: "C:\\opcenter-metadata\\dev-opcenter"
+    - name: OPCORE_IsContainer
+      value: "true" 
+  image:
+    repository: 641737106879.dkr.ecr.us-east-1.amazonaws.com/opcenter-repo
+    tag: app-server-2504.0002
+    pullPolicy: Always
+
+portal:
+  image:
+    repository: 641737106879.dkr.ecr.us-east-1.amazonaws.com/opcenter-repo
+    tag: portal-2504.0002
+    pullPolicy: Always
+
+notificationService:
+  image:
+    repository: 641737106879.dkr.ecr.us-east-1.amazonaws.com/opcenter-repo
+    tag: deployment-service-2504.0002
+    pullPolicy: Always
+
+securityServices:
+  image:
+    repository: 641737106879.dkr.ecr.us-east-1.amazonaws.com/opcenter-repo
+    tag: security-services-2504.0002
+    pullPolicy: Always
+
+inlinespc:
+  enabled: false
+  #licenseServerUrl: "salt-license-server.shared.svc.cluster.local:29000"
+  licenseServerUrl: "29000@20.219.84.197"
+  image:
+    repository: 641737106879.dkr.ecr.us-east-1.amazonaws.com/opcenter-repo
+    tag: inlinespc-2504.0002
+    pullPolicy: Always

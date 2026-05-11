@@ -1,0 +1,73 @@
+# Needed only for AWS, since Windows containers cannot access EFS file shares
+# See: https://docs.aws.amazon.com/eks/latest/userguide/efs-csi.html
+# AWS: PV and PVC at the Shared level with a file-share-service
+# Azure: PV and PVC at the Factory level
+{{ if eq .Values.cloudProvider "AWSNotInUse" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: samba-config
+data:
+  ACCOUNT_opcenter: opcenter
+  UID_opcenter: "1000"
+  SAMBA_VOLUME_CONFIG_public: "[metadata]; path=/shares/metadata; writable = yes; guest ok = yes; read only = no; create mode = 0777; directory mode = 0777; force user = nobody; browseable = yes; force create mode = 0666; create mask = 0777; force directory mode = 0777"
+  SAMBA_GLOBAL_CONFIG_guest_SPACE_account: opcenter
+  SAMBA_GLOBAL_CONFIG_inherit_SPACE_permissions: "yes"
+  SAMBA_GLOBAL_CONFIG_netbios_SPACE_name: file-share-service.shared.svc.cluster.local
+  SAMBA_CONF_LOG_LEVEL: "4"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: file-share-service
+spec:
+  type: ClusterIP
+  ports:
+    - name: samba1
+      port: 139
+      targetPort: 139
+    - name: samba2
+      port: 445
+      targetPort: 445
+  selector:
+    app: file-share-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: file-share-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: file-share-service
+  template:
+    metadata:
+      labels:
+        app: file-share-service
+    spec:
+      nodeSelector:
+        "kubernetes.io/os": linux
+      initContainers:
+      - name: data-permission-fix
+        image: servercontainers/samba
+        command: ["/bin/chmod","-R","777", "/shares/metadata"]
+        volumeMounts:
+          - name: opcenter-metadata-pv
+            mountPath: /shares/metadata
+      containers:
+      - name: file-share-service
+        imagePullPolicy: Always
+        image: servercontainers/samba:4.9.4
+        envFrom:
+          - configMapRef:
+              name: samba-config
+        volumeMounts:
+          - mountPath: /shares/metadata
+            name: opcenter-metadata-pv   
+            readOnly: false
+      volumes:
+      - name: opcenter-metadata-pv 
+        persistentVolumeClaim:
+          claimName: opcenter-metadata-pvc
+{{ end }}

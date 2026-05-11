@@ -1,0 +1,42 @@
+# Copyright Siemens 2022
+
+# cloudProvider: Azure, AWS
+cloudProvider: "AWS"
+
+# database: If using a shared database host, set its properties here. Then, in the opcenter-core-config, set the database.host = db.shared.svc.cluster.local
+database:
+  # host: Must be an IP address
+  host: 
+  # port: Most likely 1433 for SQL Server and 1521 for Oracle
+  port: 1433
+  
+# If using a shared ODS database host, set its properties here. Then, in the opcenter-core-config, set the ods-database.host = ods-db.shared.svc.cluster.local.
+# Leave these blank if not using ODS or if the ODS database host is not shared.
+odsDatabase:
+  # host: Must be an IP address
+  host: 
+  port: 1433
+  
+# licenseServer: Optional The IP address of the license server. If configured, a service will be created: license-server.shared.svc.cluster.local.
+# If DNS resolution is enabled for the pods, this is optional.
+licenseServer:
+  # host: Must be an IP address.
+  host: 
+  
+# ldapServer: Optional. The IP address of the LDAP (authentication) server. If configured, a service will be created: ldap-server.shared.svc.cluster.local.  
+# If DNS resolution is enabled for the pods, this is optional.
+ldapServer:
+  # host: Must be an IP address.
+  host: 
+  
+# storage: Configuration for the metadata file share.
+storage:
+  # fileShare: AWS only. The volumeHandle for the PV.
+  fileShare: opcenter-metadata
+  # secret: Azure only. A secret will be created and then used by opcenter-core-config to set up the Azure-based storage.
+  secret:
+    # create: True unless a secret will be created manually or via policy.
+    create: true
+    # accountname, accountkey: The Azure credentials for the Storage Account.
+    accountname: ""
+    accountkey: ""

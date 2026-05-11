@@ -1,0 +1,130 @@
+# Copyright Siemens 2022
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: security-services
+  labels:
+    {{- include "opcenter-core.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.securityServices.autoscaling.enabled }}
+  replicas: {{ .Values.securityServices.replicaCount }}
+  {{- end }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 50%
+  selector:
+    matchLabels:
+      {{- include "opcenter-core.securityServices.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- toYaml .Values.securityServices.podAnnotations | nindent 8 }}
+      labels:
+        {{- include "opcenter-core.securityServices.selectorLabels" . | nindent 8 }}
+        {{- with .Values.securityServices.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.securityServices.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: security-services
+      securityContext:
+        {{- toYaml .Values.securityServices.podSecurityContext | nindent 8 }}
+      # initContainers:
+      #   - name: fix-appsettings
+      #     image: mcr.microsoft.com/windows/servercore:ltsc2022
+      #     command: ["powershell", "-Command"]
+      #     args:
+      #       - |
+      #         $path = 'C:\opcenter-metadata\dev-opcenter\security-services\appsettings.json'
+      #         if (Test-Path $path) {
+      #           (Get-Content $path) `
+      #             -replace '"Host": "localhost"', '"Host": "security-services"' `
+      #             -replace '"Port": 443', '"Port": 80' `
+      #             -replace '"UseSSL": true', '"UseSSL": false' |
+      #           Set-Content $path
+      #         }
+      #     volumeMounts:
+      #       - name: opcenter-metadata
+      #         mountPath: C:\opcenter-metadata
+      containers:
+        - name: security-services
+          securityContext:
+            {{- toYaml .Values.securityServices.securityContext | nindent 12 }}
+          image: "{{ .Values.securityServices.image.repository }}:{{ .Values.securityServices.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.securityServices.image.pullPolicy }}
+          startupProbe:
+            httpGet:
+              path: "/CamstarSecurityServices/AuthenticationService.svc"
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 20
+          livenessProbe:
+            httpGet:
+              path: "/CamstarSecurityServices/AuthenticationService.svc"
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          env:
+            - name: OPCORE_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: opcenter-db-secrets
+                  key: OPCORE_DB_PASSWORD
+            - name: OPCORE_DB_SCHEMA
+              valueFrom:
+                secretKeyRef:
+                  name: opcenter-db-secrets
+                  key: OPCORE_DB_SCHEMA
+            - name: OPCORE_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: opcenter-db-secrets
+                  key: OPCORE_DB_USERNAME
+            {{- if .Values.securityServices.extraEnv -}}
+              {{ toYaml .Values.securityServices.extraEnv | nindent 12 }}
+            {{- end }}
+          envFrom:
+            - configMapRef:
+                name: opcenter-config
+            - configMapRef:
+                name: opcenter-deploy-config
+            {{- if .Values.securityServices.extraEnvFrom -}}
+              {{ toYaml .Values.securityServices.extraEnvFrom | nindent 12 }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.securityServices.resources | nindent 12 }}
+          volumeMounts:
+            - name: opcenter-metadata
+              mountPath: \opcenter-metadata
+          {{- if .Values.securityServices.extraVolumeMounts -}}
+            {{ toYaml .Values.securityServices.extraVolumeMounts | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: opcenter-metadata
+          persistentVolumeClaim:
+            claimName: opcenter-metadata-pvc-{{ .Release.Namespace }}
+      {{- if .Values.securityServices.extraVolumes -}}
+        {{ toYaml .Values.securityServices.extraVolumes | nindent 8 }}
+      {{- end }}
+      nodeSelector:
+        "kubernetes.io/os": windows
+        {{- if eq .Values.cloudProvider "Azure" }}
+        "kubernetes.azure.com/os-sku": Windows2022
+        {{- end }}
+        {{- with .Values.securityServices.nodeSelectors }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.securityServices.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.securityServices.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

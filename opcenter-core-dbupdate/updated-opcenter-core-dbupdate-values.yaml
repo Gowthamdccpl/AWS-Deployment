@@ -1,0 +1,113 @@
+# Copyright Siemens 2022
+#
+# Default values for opcenter-core.
+# This is a YAML-formatted file.
+# # Declare variables to be passed into your templates.
+
+# # cloudProvider: Azure, AWS
+# cloudProvider: "AWS"
+# updateType: create # create, metadata-only, metadata-and-generate
+# image:
+#   repository: myregistry.amazonaws.com/dbupdate
+#   repositoryAzure: opcenter-core/updated-opcenter-core-values.yaml
+#   tag: dbupdate-2504.0002
+#   pullPolicy: Always
+# metadataPath: %DEPLOYNAME%\%VER%
+# stagingPath: staging\%VER%\ootb
+# sourcePath: ""
+# sharedNamespace: shared
+# configuration: # Override properties from the SiteInfo.mdb
+#    totalNumOfSites: 1
+#    warningThreshold: 50000
+#    siteIdentifier: 1
+#    siteName: Site1
+# odsDatabase: # type: Oracle, SQLServer
+#    enabled: false
+#    # type: SQLServer, Oracle
+#    type: SQLServer  
+#    # database credentials.
+#    host: sqlhostname
+#    schema: %DEPLOYNAME%
+#    username: %DEPLOYNAME%
+#    password: ""
+#    name: %DEPLOYNAME%  
+#    # port: Database listener port. Typically 1433 for SQL Server and 1521 for Oracle.
+#    port: 1433
+     
+
+
+# cloudProvider: "AWS"
+# updateType: create
+
+# database:
+#   host: 100.26.162.7
+#   name: opcenter_new
+#   port: 1433
+#   username: admin
+#   password: ""
+#   schema: dbo
+
+# odsDatabase:
+#   enabled: false
+
+# cloudProvider: "AWS"
+# updateType: create
+# #updateType: metadata-and-generate-forced
+
+# image:
+#   repository: 641737106879.dkr.ecr.us-east-1.amazonaws.com/opcenter-repo
+#   tag: dbupdate-2504.0002
+#   pullPolicy: Always
+
+# database:
+#   host: 100.26.162.7
+#   name: opcenter_new
+#   port: 1433
+#   username: admin
+#   password: ""
+#   schema: dbo
+
+# odsDatabase:
+#   enabled: false
+
+# #dbupdateArgs: "\"/dbupdate\", \"-ld\", \"-lco\", \"-gws\", \"-container\", "
+
+cloudProvider: "AWS"
+
+# MUST be create for fresh DB
+#updateType: create
+updateType: metadata-and-generate
+#updateType: metadata-only
+
+# CRITICAL — metadata + staging paths
+# metadataPath: dev-opcenter
+# stagingPath: staging\2504\ootb
+# stagingPath: dev-opcenter\staging\2504\ootb
+# metadataPath: dev-opcenter\rev-2504
+stagingPath: staging\2504\ootb
+metadataPath: rev-2504
+
+
+# CRITICAL
+configuration:
+  totalNumOfSites: 1
+  warningThreshold: 50000
+  siteIdentifier: 1
+  siteName: Site1
+
+image:
+  repository: 641737106879.dkr.ecr.us-east-1.amazonaws.com/opcenter-repo
+  tag: dbupdate-2504.0002
+  pullPolicy: Always
+
+database:
+  host: 100.26.162.7
+  name: opcenter_new
+  port: 1433
+  username: admin
+  password: ""
+  schema: dbo
+
+odsDatabase:
+  enabled: false
+

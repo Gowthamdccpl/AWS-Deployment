@@ -1,0 +1,162 @@
+# Copyright Siemens 2024
+{{- $dbupdateArgs := .Values.dbupdateArgs -}}
+{{- if eq .Values.updateType "create"}}
+{{- $dbupdateArgs = print "\"/dbcreate\", \"-ums\", \"-gws\", \"-csp\", \"-ci\", \"-lid\", \"-lco\",\"-lcor\", \"-ld\", " -}}
+{{- end}}
+{{- if eq .Values.updateType "metadata-only"}} 
+{{- $dbupdateArgs = print "\"/dbupdate\", \"-ums\", \"-csp\", " -}}
+{{- end}}
+{{- if eq .Values.updateType "metadata-only-forced"}}
+{{- $dbupdateArgs = print "\"/dbupdate\", \"-ums\", \"-csp\", \"-ci\", \"-fds\", " -}}
+{{- end}}
+{{- if eq .Values.updateType "metadata-and-generate"}}
+{{- $dbupdateArgs = print "\"/dbupdate\", \"-ums\", \"-csp\", \"-lco\", \"-gws\", " -}}
+{{- end}}
+{{- if eq .Values.updateType "metadata-and-generate-forced"}}
+{{- $dbupdateArgs = print "\"/dbupdate\", \"-ums\", \"-csp\", \"-lco\", \"-gws\", " -}}
+{{- end}}
+{{- if eq .Values.updateType "metadata-and-generate-without-loadCamstarObjects"}}
+{{- $dbupdateArgs = print "\"/dbupdate\", \"-ums\", \"-csp\", \"-ci\", \"-gws\", \"-fds\", " -}}
+{{- end}}
+{{- if eq .Values.updateType "load-camstar-objects"}}
+{{- $dbupdateArgs = print "\"/dbupdate\", \"-lco\", " -}}
+{{- end}}
+{{- if eq .Values.updateType "load-dictionaries"}}
+{{- $dbupdateArgs = print "\"/dbupdate\", \"-ld\", " -}}
+{{- end}}
+{{- if eq .Values.updateType "load-dictionaries-reloadAll"}}
+{{- $dbupdateArgs = print "\"/dbupdate\", \"-ld\", \"-ldr\", " -}}
+{{- end}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "opcenter-core-dbupdate.fullname" . }}
+  labels:
+    {{- include "opcenter-core-dbupdate.labels" . | nindent 4 }}
+spec:
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "opcenter-core-dbupdate.selectorLabels" . | nindent 8 }}
+        {{- if .Values.podLabels }}
+        {{ toYaml .Values.podLabels | nindent 8 }}
+        {{- end }}
+    spec:
+      nodeSelector:
+        "kubernetes.io/os": windows
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "opcenter-core-dbupdate.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      restartPolicy: Never
+      containers:
+      - name: dbupdate
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        args: [{{ $dbupdateArgs }} "-container", "-mdb", "mdb\\InSite.mdb", "-sitemdb", "mdb\\SiteInfo.mdb"]
+        
+        # args:
+        #  - /dbupdate
+        #  - -ums
+        #  - -csp
+        #  - -ci
+        #  - -ld
+        #  - -lco
+        #  - -gws
+        #  - -container
+        #  - -mdb
+        #  - mdb\InSite.mdb
+        #  - -sitemdb
+        #  - mdb\SiteInfo.mdb
+        env:
+        - name: OPCORE_DBUPDATE_ISCONTAINER
+          value: "true"
+        - name: OPCORE_DBUPDATE_ARGS
+          value: "/dbupdate -ums -csp -lco -gws -ld -fds -container"
+        - name: OPCORE_DBUPDATE_STAGING
+          value: C:\opcenter-metadata\{{ .Values.stagingPath -}}
+          {{- if .Values.sourcePath}}
+        - name: OPCORE_DBUPDATE_SOURCE
+          {{ if or .Values.cloudProvider "AWS"  .Values.cloudProvider "Azure" -}}
+          value: C:\opcenter-metadata\{{ .Values.sourcePath}}
+          {{ end }}
+          {{- end }}
+        - name: OPCORE_DBUPDATE_TARGET
+          {{ if or .Values.cloudProvider "AWS"  .Values.cloudProvider "Azure" -}}
+          value: C:\opcenter-metadata\{{ .Values.metadataPath -}}
+          {{ end }}
+        - name: OPCORE_METADATA_PATH
+          {{ if or .Values.cloudProvider "AWS"  .Values.cloudProvider "Azure" -}}
+          value: C:\opcenter-metadata\{{ .Values.metadataPath -}}
+          {{ end }}
+        - name: OPCORE_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: opcenter-db-secrets
+              key: OPCORE_DB_PASSWORD
+        - name: OPCORE_DB_SCHEMA
+          valueFrom:
+            secretKeyRef:
+              name: opcenter-db-secrets
+              key: OPCORE_DB_SCHEMA
+        - name: OPCORE_DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: opcenter-db-secrets
+              key: OPCORE_DB_USERNAME
+        {{- if .Values.odsDatabase.enabled }}
+        - name: OPCORE_ODSDB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "opcenter-core-dbupdate.SecretName" . }}
+              key: OPCORE_ODSDB_USERNAME
+        - name: OPCORE_ODSDB_SCHEMA
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "opcenter-core-dbupdate.SecretName" . }}
+              key: OPCORE_ODSDB_SCHEMA
+        - name: OPCORE_ODSDB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "opcenter-core-dbupdate.SecretName" . }}
+              key: OPCORE_ODSDB_PASSWORD
+        {{- end }}
+        {{- range .Values.extraEnv }}
+        - name: {{ .name }}
+          value: "{{ .value }}"
+        {{- end }}
+        envFrom:
+        - configMapRef:
+            name: opcenter-config
+        - configMapRef:
+            name: {{ include "opcenter-core-dbupdate.ConfigMapName" . }}
+        {{ if .Values.extraEnvFrom }}  
+        {{- toYaml .Values.extraEnvFrom | nindent 8 }}        
+        {{- end -}}
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+        {{- if or .Values.cloudProvider "AWS"  .Values.cloudProvider "Azure" }}
+        volumeMounts:
+        - name: opcenter-metadata
+          mountPath: \opcenter-metadata
+        {{ end -}}
+        {{- if .Values.extraVolumeMounts -}}
+          {{ toYaml .Values.extraVolumeMounts | nindent 8 }}
+        {{- end }}
+      {{ if or .Values.cloudProvider "AWS"  .Values.cloudProvider "Azure" -}}
+      volumes:      
+        - name: opcenter-metadata
+          persistentVolumeClaim:
+            claimName: opcenter-metadata-pvc-{{ .Release.Namespace }}
+      {{- end -}}
+      {{- if .Values.extraVolumes -}}
+      {{ toYaml .Values.extraVolumes | nindent 6 }}
+      {{- end }}
+  backoffLimit: 4

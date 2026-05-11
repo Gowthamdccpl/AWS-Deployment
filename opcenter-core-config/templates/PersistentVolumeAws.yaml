@@ -1,0 +1,27 @@
+# Copyright Siemens 2022
+# AWS: PV for AWS (with a Fsx fileshare service)
+{{ if eq .Values.cloudProvider "AWS" }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name:  opcenter-metadata-pv-{{ .Release.Namespace }}
+spec:
+  capacity:
+    storage: 50Gi # PV-Size
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: {{ .Values.config.StorageClass }}
+  mountOptions:
+    - dir_mode=0777
+    - file_mode=0777
+  csi:
+    driver: smb.csi.k8s.io
+    readOnly: false
+    volumeHandle: smb-csi-driver-volume2 # Must be unique in the EKS Cluster, eg: PV-1
+    volumeAttributes:
+      source: {{ .Values.storage.fileShare }}
+    nodeStageSecretRef:
+      name: {{ .Values.config.secretName }}
+      namespace: shared
+{{ end }}

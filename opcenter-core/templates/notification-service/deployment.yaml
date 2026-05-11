@@ -1,0 +1,100 @@
+# Copyright Siemens 2022
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  labels:
+    {{- include "opcenter-core.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.notificationService.autoscaling.enabled }}
+  replicas: {{ .Values.notificationService.replicaCount }}
+  {{- end }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 50%
+  selector:
+    matchLabels:
+      {{- include "opcenter-core.notificationService.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- toYaml .Values.notificationService.podAnnotations | nindent 8 }}
+      labels:
+        {{- include "opcenter-core.notificationService.selectorLabels" . | nindent 8 }}
+        {{- with .Values.notificationService.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.notificationService.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: notification-service
+      securityContext:
+        {{- toYaml .Values.notificationService.podSecurityContext | nindent 8 }}
+      containers:
+        - name: notification-service
+          securityContext:
+            {{- toYaml .Values.notificationService.securityContext | nindent 12 }}
+          image: "{{ .Values.notificationService.image.repository }}:{{ .Values.notificationService.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.notificationService.image.pullPolicy }}
+          env:
+            - name: OPCORE_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: opcenter-db-secrets
+                  key: OPCORE_DB_PASSWORD
+            - name: OPCORE_DB_SCHEMA
+              valueFrom:
+                secretKeyRef:
+                  name: opcenter-db-secrets
+                  key: OPCORE_DB_SCHEMA
+            - name: OPCORE_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: opcenter-db-secrets
+                  key: OPCORE_DB_USERNAME
+            {{- if .Values.notificationService.extraEnv -}}
+              {{ toYaml .Values.notificationService.extraEnv | nindent 12 }}
+            {{- end }}
+          envFrom:
+            - configMapRef:
+                name: opcenter-config
+            - configMapRef:
+                name: opcenter-deploy-config
+            {{- if .Values.notificationService.extraEnvFrom -}}
+              {{ toYaml .Values.notificationService.extraEnvFrom | nindent 12 }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.notificationService.resources | nindent 12 }}
+          volumeMounts:
+            - name: opcenter-metadata
+              mountPath: \opcenter-metadata
+          {{- if .Values.notificationService.extraVolumeMounts -}}
+            {{ toYaml .Values.notificationService.extraVolumeMounts | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: opcenter-metadata
+          persistentVolumeClaim:
+            claimName: opcenter-metadata-pvc-{{ .Release.Namespace }}
+      {{- if .Values.notificationService.extraVolumes -}}
+        {{ toYaml .Values.notificationService.extraVolumes | nindent 8 }}
+      {{- end }}
+      nodeSelector:
+        "kubernetes.io/os": windows
+        {{- if eq .Values.cloudProvider "Azure" }}
+        "kubernetes.azure.com/os-sku": Windows2022
+        {{- end }}
+        {{- with .Values.notificationService.nodeSelectors }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.notificationService.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.notificationService.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

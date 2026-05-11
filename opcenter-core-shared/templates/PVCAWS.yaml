@@ -1,0 +1,13 @@
+# AWS: PV and PVC at the Shared level
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: opcenter-metadata-pvc-{{ .Release.Namespace }}
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ""
+  resources:
+    requests:
+      storage: 5Gi
+  volumeName: opcenter-metadata-pv

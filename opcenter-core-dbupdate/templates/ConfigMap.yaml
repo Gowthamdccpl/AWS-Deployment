@@ -1,0 +1,22 @@
+# Copyright Siemens 2022
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "opcenter-core-dbupdate.ConfigMapName" . }}
+data:
+  {{- if .Values.odsDatabase.enabled }}
+  OPCORE_ODSDB_HOST: {{ .Values.odsDatabase.host }}
+  OPCORE_ODSDB_NAME: {{ .Values.odsDatabase.name }}
+  OPCORE_ODSDB_PORT: "{{ .Values.odsDatabase.port }}"
+  OPCORE_ODSDB_TYPE: {{ .Values.odsDatabase.type }}
+  {{- end }}
+  OPCORE_ODS_PRESENT: "{{ .Values.odsDatabase.enabled }}"
+  {{- if .Values.configuration }}
+  OPCORE_DBID_TOTALNUMOFSITES: "{{ .Values.configuration.totalNumOfSites }}"
+  OPCORE_DBID_WARNINGTHRESHOLD: "{{ .Values.configuration.warningThreshold }}"
+  OPCORE_DBID_SITEIDENTIFIER: "{{ .Values.configuration.siteIdentifier }}"
+  OPCORE_DBID_SITENAME: {{ .Values.configuration.siteName }}
+  {{- end }}
+  {{- if .Values.configuration.defaultUser }}
+  OPCORE_DEFAULT_USER: {{ .Values.configuration.defaultUser }}
+  {{- end }}

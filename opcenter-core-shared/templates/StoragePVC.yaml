@@ -1,0 +1,15 @@
+# AWS: PV and PVC at the Shared level (with a file-share-host service)
+# Azure: PV and PVC at the Factory level
+{{ if eq .Values.cloudProvider "AWSNotInUse" }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: opcenter-metadata-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: "opcenter-sc"
+  resources:
+    requests:
+      storage: 5Gi
+{{ end }}

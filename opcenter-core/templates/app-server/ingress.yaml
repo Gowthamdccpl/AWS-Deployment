@@ -1,0 +1,66 @@
+{{- if .Values.appServer.ingress.enabled -}}
+# Copyright Siemens 2022
+{{- $svcPort := .Values.appServer.service.port -}}
+{{- if and .Values.appServer.ingress.className (not (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion)) }}
+  {{- if not (hasKey .Values.appServer.ingress.annotations "kubernetes.io/ingress.class") }}
+  {{- $_ := set .Values.appServer.ingress.annotations "kubernetes.io/ingress.class" .Values.appServer.ingress.className}}
+  {{- end }}
+{{- end }}
+{{ if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion -}}
+apiVersion: networking.k8s.io/v1
+{{- else if semverCompare ">=1.14-0" .Capabilities.KubeVersion.GitVersion -}}
+apiVersion: networking.k8s.io/v1beta1
+{{ else -}}
+apiVersion: extensions/v1beta1
+{{ end}}
+kind: Ingress
+metadata:
+  name: appserver-ingress
+  labels:
+    {{- include "opcenter-core.labels" . | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "{{- .Values.appServer.ingress.sslRedirect }}"
+    {{- if .Values.appServer.ingress.forceAffinity}}
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    {{- end}}
+    nginx.ingress.kubernetes.io/affinity-mode: "persistent"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "500"
+    {{- if .Values.appServer.ingress.maxBodySize}}
+    nginx.ingress.kubernetes.io/proxy-body-size: {{ .Values.appServer.ingress.maxBodySize}}
+    {{- end}}
+    {{- if .Values.appServer.ingress.clusterIssuer}}
+    cert-manager.io/cluster-issuer: {{ .Values.appServer.ingress.clusterIssuer}}
+    {{- end}}
+  {{- with .Values.appServer.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if and .Values.appServer.ingress.className (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
+  ingressClassName: {{ .Values.appServer.ingress.className }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.appServer.ingress.host }}
+      http:
+        paths:
+          - path: /
+            {{- if (semverCompare ">=1.18-0" $.Capabilities.KubeVersion.GitVersion) }}
+            pathType: ImplementationSpecific
+            {{- end }}
+            backend:
+              {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
+              service:
+                name: app-server
+                port:
+                  number: {{ $svcPort }}
+              {{- else }}
+              serviceName: app-server
+              servicePort: {{ $svcPort }}
+              {{- end }}
+  {{- if .Values.appServer.ingress.tls }}
+  tls:
+    - hosts:
+        - {{ .Values.appServer.ingress.host }}
+      secretName: opcenter-app-server-tls
+  {{- end }}
+{{- end }}

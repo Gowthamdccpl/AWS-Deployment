@@ -1,0 +1,188 @@
+# Copyright Siemens 2022
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-server
+  labels:
+    {{- include "opcenter-core.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.appServer.autoscaling.enabled }}
+  replicas: {{ .Values.appServer.replicaCount }}
+  {{- end }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 50%
+  selector:
+    matchLabels:
+      {{- include "opcenter-core.appServer.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        prometheus.io/path: /metrics
+        prometheus.io/port: "50505"
+        prometheus.io/scheme: http
+        prometheus.io/scrape: "true"
+        {{- with .Values.appServer.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "opcenter-core.appServer.selectorLabels" . | nindent 8 }}
+        {{- with .Values.appServer.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.appServer.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: app-server
+      securityContext:
+        {{- toYaml .Values.appServer.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: fix-appsettings
+          image: mcr.microsoft.com/windows/servercore:ltsc2022
+          command: ["powershell", "-Command"]
+          args:
+            - |
+              $path = 'C:\opcenter-metadata\dev-opcenter\app-server\appsettings.json'
+              if (Test-Path $path) {
+                (Get-Content $path) `
+                  -replace '"Host": "localhost"', '"Host": "security-services"' `
+                  -replace '"Port": 443', '"Port": 80' `
+                  -replace '"UseSSL": true', '"UseSSL": false' |
+                Set-Content $path
+              }
+          volumeMounts:
+            - name: opcenter-metadata
+              mountPath: C:\opcenter-metadata
+      containers:
+        - name: app-server
+          securityContext:
+            {{- toYaml .Values.appServer.securityContext | nindent 12 }}
+          {{- if .Values.appServer.connectMOM.enabled }}
+          image: "{{ .Values.appServer.connectMOM.image.repository }}:{{ .Values.appServer.connectMOM.image.tag | default .Chart.AppVersion }}"
+          {{- else }}
+          image: "{{ .Values.appServer.image.repository }}:{{ .Values.appServer.image.tag | default .Chart.AppVersion }}"
+          {{- end }}
+          imagePullPolicy: {{ .Values.appServer.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          startupProbe:
+            httpGet:
+              path: "/CamstarAppServer/api"
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 20
+          livenessProbe:
+            httpGet:
+              path: "/CamstarAppServer/api"
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          env:
+            - name: OPCORE_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: opcenter-db-secrets
+                  key: OPCORE_DB_PASSWORD
+            - name: OPCORE_DB_SCHEMA
+              valueFrom:
+                secretKeyRef:
+                  name: opcenter-db-secrets
+                  key: OPCORE_DB_SCHEMA
+            - name: OPCORE_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: opcenter-db-secrets
+                  key: OPCORE_DB_USERNAME
+            {{- if .Values.appServer.connectMOM.enabled }}
+            {{- if .Values.appServer.connectMOM.mountPassphrase }}
+            - name: OPCORE_MIO_PASSPHRASE
+              valueFrom:
+                secretKeyRef:
+                  name: opcenter-db-secrets
+                  key: OPCORE_MIO_PASSPHRASE
+            {{- end }}
+            {{- end }}
+            {{- if .Values.appServer.connectMOM.enabled }}
+            {{- if .Values.appServer.connectMOM.mountPassword }}
+            - name: OPCORE_MIO_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: opcenter-db-secrets
+                  key: OPCORE_MIO_PASSWORD
+            {{- end }}
+            {{- end }}
+            {{- if .Values.appServer.connectServiceAccount.enabled }}
+            - name: OPCORE_SERVICE_ACCOUNT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: opcenter-appserver-secrets
+                  key: OPCORE_SERVICE_ACCOUNT_USERNAME
+            - name: OPCORE_SERVICE_ACCOUNT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: opcenter-appserver-secrets
+                  key: OPCORE_SERVICE_ACCOUNT_PASSWORD
+            {{- end }}
+            {{- if .Values.appServer.connectRestApi.username }}
+            {{- if .Values.appServer.connectRestApi.password }}
+            - name: OPCORE_RESTAPI_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: opcenter-appserver-secrets
+                  key: OPCORE_RESTAPI_USERNAME
+            - name: OPCORE_RESTAPI_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: opcenter-appserver-secrets
+                  key: OPCORE_RESTAPI_PASSWORD
+            {{- end }}
+            {{- end }}
+            {{- if .Values.appServer.extraEnv -}}
+              {{ toYaml .Values.appServer.extraEnv | nindent 12 }}
+            {{- end }}
+          envFrom:
+            - configMapRef:
+                name: opcenter-config
+            - configMapRef:
+                name: opcenter-deploy-config
+            {{- if .Values.appServer.extraEnvFrom -}}
+              {{ toYaml .Values.appServer.extraEnvFrom | nindent 12 }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.appServer.resources | nindent 12 }}
+          volumeMounts:
+            - name: opcenter-metadata
+              mountPath: \opcenter-metadata
+          {{- if .Values.appServer.extraVolumeMounts -}}
+            {{ toYaml .Values.appServer.extraVolumeMounts | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: opcenter-metadata
+          persistentVolumeClaim:
+            claimName: opcenter-metadata-pvc-{{ .Release.Namespace }}
+      {{- if .Values.appServer.extraVolumes -}}
+        {{ toYaml .Values.appServer.extraVolumes | nindent 8 }}
+      {{- end }}
+      nodeSelector:
+        "kubernetes.io/os": windows
+        {{- if eq .Values.cloudProvider "Azure" }}
+        "kubernetes.azure.com/os-sku": Windows2022
+        {{- end }}
+        {{- with .Values.appServer.nodeSelectors }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.appServer.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.appServer.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -1,0 +1,102 @@
+# Copyright Siemens 2023
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inlinespc
+  labels:
+    {{- include "opcenter-core.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.inlinespc.enabled }}
+  replicas: 0
+  {{- else if not .Values.inlinespc.autoscaling.enabled }}
+  replicas: {{ .Values.inlinespc.replicaCount }}
+  {{- end }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 50%
+  selector:
+    matchLabels:
+      {{- include "opcenter-core.inlinespc.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- toYaml .Values.inlinespc.podAnnotations | nindent 8 }}
+      labels:
+        {{- include "opcenter-core.inlinespc.selectorLabels" . | nindent 8 }}
+        {{- with .Values.inlinespc.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.inlinespc.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: inlinespc
+      securityContext:
+        {{- toYaml .Values.inlinespc.podSecurityContext | nindent 8 }}
+      containers:
+        - name: inlinespc
+          securityContext:
+            {{- toYaml .Values.inlinespc.securityContext | nindent 12 }}
+          image: "{{ .Values.inlinespc.image.repository }}:{{ .Values.inlinespc.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.inlinespc.image.pullPolicy }}
+          env:
+            - name: OPCORE_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: opcenter-db-secrets
+                  key: OPCORE_DB_PASSWORD
+            - name: OPCORE_DB_SCHEMA
+              valueFrom:
+                secretKeyRef:
+                  name: opcenter-db-secrets
+                  key: OPCORE_DB_SCHEMA
+            - name: OPCORE_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: opcenter-db-secrets
+                  key: OPCORE_DB_USERNAME
+            {{- if .Values.inlinespc.extraEnv -}}
+              {{ toYaml .Values.inlinespc.extraEnv | nindent 12 }}
+            {{- end }}
+          envFrom:
+            - configMapRef:
+                name: opcenter-config
+            - configMapRef:
+                name: opcenter-deploy-config
+            {{- if .Values.inlinespc.extraEnvFrom -}}
+              {{ toYaml .Values.inlinespc.extraEnvFrom | nindent 12 }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.inlinespc.resources | nindent 12 }}
+          volumeMounts:
+            - name: opcenter-metadata
+              mountPath: \opcenter-metadata
+          {{- if .Values.inlinespc.extraVolumeMounts -}}
+            {{ toYaml .Values.inlinespc.extraVolumeMounts | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: opcenter-metadata
+          persistentVolumeClaim:
+            claimName: opcenter-metadata-pvc-{{ .Release.Namespace }}
+      {{- if .Values.inlinespc.extraVolumes -}}
+        {{ toYaml .Values.inlinespc.extraVolumes | nindent 8 }}
+      {{- end }}
+      nodeSelector:
+        "kubernetes.io/os": windows
+        {{- if eq .Values.cloudProvider "Azure" }}
+        "kubernetes.azure.com/os-sku": Windows2022
+        {{- end }}
+        {{- with .Values.inlinespc.nodeSelectors }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.inlinespc.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.inlinespc.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

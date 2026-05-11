@@ -1,0 +1,12 @@
+.DS_Store
+Thumbs.db
+
+# Local Kubernetes and Helm binaries/configs
+kubectl
+helm
+kubeconfig
+*.kubeconfig
+
+# Local generated deployment files
+*-values.local.yaml
+*-dbcreate-values.yaml

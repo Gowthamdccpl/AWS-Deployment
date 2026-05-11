@@ -1,0 +1,14 @@
+# Copyright Siemens 2023
+apiVersion: v1
+kind: Service
+metadata:
+  name: inlinespc
+  labels:
+    {{- include "opcenter-core.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.inlinespc.service.type }}
+  ports:
+    - port: {{ .Values.inlinespc.service.port }}
+  selector:
+    {{- include "opcenter-core.inlinespc.selectorLabels" . | nindent 4 }}
+  sessionAffinity: ClientIP

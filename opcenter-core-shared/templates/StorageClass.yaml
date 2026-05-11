@@ -1,0 +1,12 @@
+# Copyright Siemens 2022
+{{ if eq .Values.cloudProvider "AWSNotInUse" }}
+# For Amazon Web Services
+#    https://docs.aws.amazon.com/eks/latest/userguide/efs-csi.html
+#    Requires Amazon EFS CSI driver to be installed, and an EFS to be created and accessible
+#
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: opcenter-sc
+provisioner: efs.csi.aws.com
+{{ end }}

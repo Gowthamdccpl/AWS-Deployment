@@ -1,0 +1,33 @@
+# Copyright Siemens 2024
+{{- if .Values.appServer.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: app-server
+  labels:
+    {{- include "opcenter-core.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: app-server
+  minReplicas: {{ .Values.appServer.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.appServer.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.appServer.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.appServer.autoscaling.targetCPUUtilizationPercentage }} 
+    {{- end }}
+    {{- if .Values.appServer.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.appServer.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}

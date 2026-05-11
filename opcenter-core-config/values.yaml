@@ -1,0 +1,114 @@
+# Copyright Siemens 2022
+# Default values for opcenter-core.
+
+
+# cloudProvider: Azure, AWS
+cloudProvider: "AWS"
+
+# licensing: the ability to assign licenses to a whole suite of applications, and not to a single application instance.
+licensing:
+    userLicenseAllocation: -1
+
+
+# database: Connection info for this site's database
+database: 
+  # createSecret: Should be true unless you are creating a secret manually. See Secrets.yaml for details.
+  createSecret: true
+  
+  # type: Oracle, SQLServer
+  type: SQLServer
+  
+  # User, password, schema and database name.
+  username: ""
+  password: ""
+  schema: ""
+  name: ""
+  
+  # port: Database listener port. Typically 1433 for SQL Server and 1521 for Oracle. 
+  port: 1433
+  
+  # maxRowsetSize: The maximum number of rows to return on an Opcenter Core query. Default=15000.
+  maxRowsetSize: 15000
+  
+  # host: If using a shared database host, this can be left as-is because the shared deplayment should have created this service definition.
+  #       Otherwise, the actual network name of the database host. Must be resolvable from within the pods.
+  host: db.shared.svc.cluster.local
+
+# Fsx: AWS Fsx fileshare credentials
+Fsx: 
+  # createSecret: Should be true unless you are creating a secret manually. See Secrets.yaml for details.
+  createSecret: false
+  
+  # User, password, schema and database name.
+  username: ""
+  password: ""
+  domain: ""
+  
+
+  
+# storage: Azure only. The name of the Azure File Share for this deployment. Default=opcenter.
+storage:
+  fileShare: opcenter
+  
+# defaultDomain: The default authentication domain to use when a user doesn't supply a domain during login (automation clients). Default="."
+defaultDomain: "."
+
+# ldap: Additional configuration for LDAP authentication.
+ldap:
+  # certificatesPath: The location of the LDAP client certificates. Used when using LDAPS. Certificates will be downloaded and installed in the security-services pods. Default=certificates\ldap.
+  certificatePath: certificates\ldap
+  
+# sharedNamespace: The name of the deployment's shared namespace. In most cases this should not be changed. Default=shared.
+sharedNamespace: shared
+
+# connectMOM: Configuration for the Connect MOM Client Gateway.
+connectMOM:
+  # enabled: If true, the app-server-with-connect container image will be used. This image has the Connect MOM Client Gateway installed.
+  enabled: false
+  
+  # createSecret: If true, a secret will be created containing the passphrase and password. Should be true unless you're creating a secret manually. See Secrets.yaml for details.
+  createSecret: false
+  
+  # certificatePath: The localtion on the file share for Connect MOM client certificates. Certificates will be downloaded and installed in the app-server pods if the Client Gateway is enabled. Default=certificates\connectMOM
+  certificatePath: certificates\connectMOM
+  
+  # passphrase: The passphrase used during the Connect MOM installation. This is used for certificate encryption/decryption. This is different from the password.
+  passphrase: 
+  
+  # username, password: The credentials to use when connecting to the Connect MOM server. 
+  username: 
+  password: 
+  
+  # UseSSL: Whether or not to use SSL when connecting from the app server client to the Connect MOM server.
+  useSSL: false
+  
+  # serverName, serverIP: The DNS name and IP address of the Connect MOM Server. Both are required due to the nature of the client gateway configuration.
+  serverName: 
+  serverIP: 
+  
+  # clientName: The Client Gateway name as configured in the Connect MOM Server. This should be the ingress name that is exposed for this deployment.
+  clientName: ""
+
+inlinespc: 
+  # License server url for inline SPC comonent
+  licenseServerUrl: ""
+
+# services: Internal Kubernetes service URLs for inter-pod communication
+services:
+  # authenticationServiceUrl: URL for the Security Services authentication endpoint
+  authenticationServiceUrl: "http://security-services/CamstarSecurityServices/AuthenticationService.svc"
+  # authorizationServiceUrl: URL for the Security Services authorization endpoint
+  authorizationServiceUrl: "http://security-services/CamstarSecurityServices/AuthorizationService.svc"
+
+connectSAPBO:
+  # serverName, serverIP: The DNS name and IP address of the Connect SAPBO Server.
+  serverName:
+  serverIP:
+  #certPassword: Certificate password used to install SAPBO server pfx certificate
+  certPassword:
+  certificatePath: certificates\connectSAPBO
+  #username, password: The credentials to use when connecting to the Connect SAPBO server. Username & password should be same as used in Opcenter execution core and SAPBO server
+  username:
+  password:
+
+  

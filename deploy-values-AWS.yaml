@@ -1,0 +1,112 @@
+# Copyright Siemens 2022
+# Default values for opcenter-core.
+
+nameOverride: ""
+fullnameOverride: ""
+
+# cloudProvider: Azure, AWS
+cloudProvider: AWS
+Namespace: %DEPLOYNAME% 
+# Values used in opcenter-core-config
+database: # type: Oracle, SQLServer
+   type: %DBType%
+   host: %DBHost%
+   username: %DEPLOYNAME%
+   password: ""
+   schema: %DEPLOYNAME%
+   name: %DBName%
+   port: %DBPort%   
+   maxRowsetSize: 15000
+
+# Values used in opcenter-core (to override)
+defaultDomain: "ContainerizationAdminVM"
+storage: 
+   fileShare: "//filedomain.fileshare.com/share" 
+config:
+  # metadataPath: The path within the File Share that this deployment should use for its files (metadata, WCF services, portal files, etc.). Should have the form: factory\revision
+  metadataPath: %DEPLOYNAME%\%VER%
+  StorageClass: opcenter-sc
+  secretName: opcfsxsecrets
+
+# connectMOM: If interfacing with Connect MOM, a different image is used, along with its configuration. Instead of using the app-server image, we will use app-server-with-connect.
+connectMOM:
+    enabled: false
+    certificatePath: certificates\connectMOM
+    passphrase: Passphrase
+    username: ""
+    password: ""
+    useSSL: true
+    serverName: "" 
+    serverIP: ""
+    clientName: ""
+    createSecret: true
+
+connectSAPBO:
+    serverName: ""
+    serverIP: ""
+    certificatePath: certificates\connectSAPBO 
+    certPassword: ""
+    username: ""
+    password: ""  
+
+appServer:
+  image:
+    repository: myregistry.amazonaws.com/app-server
+    tag: "%VER%"
+    pullPolicy: Always
+  # connectMOM: If interfacing with Connect MOM, a different image is used, along with its configuration. Instead of using the app-server image, we will use app-server-with-connect.
+  connectMOM:
+     enabled: false
+     image:
+        repository: myregistry.amazonaws.com/app-server-with-connect
+        tag: "%VER%"
+        pullPolicy: Always 
+
+  # connectServiceAccount : primarily used to connect label printers
+  connectServiceAccount:
+    enabled: false
+    username: ""
+    password: ""
+    
+  # connectRestApi : username and password for RestAPI configuration
+  connectRestApi:
+    username: ""
+    password: ""
+
+  # App Server Ingress Resource
+  ingress:
+    host: %DEPLOYNAME%-app.opcentercore.com
+    tls: true
+    
+portal:
+  image:
+    repository: myregistry.amazonaws.com/portal
+    tag: "%VER%"
+    pullPolicy: Always
+  ingress:    
+    host: %DEPLOYNAME%.opcentercore.com
+    tls: true
+  resources:
+    requests:
+      memory: 500Mi
+      cpu: 500m 
+
+notificationService:
+  image:
+    repository: myregistry.amazonaws.com/notification-service
+    tag: "%VER%"
+    pullPolicy: Always
+
+securityServices:
+  image:
+    repository: myregistry.amazonaws.com/security-services
+    tag: "%VER%"
+    pullPolicy: Always  
+    
+inlinespc:
+  licenseServerUrl: 29000@salt-license-server.shared.svc.cluster.local
+  enabled: %enableInlineSpc%
+  image:
+    repository: myregistry.amazonaws.com/inlinespc
+    tag: "%VER%"
+    pullPolicy: Always

@@ -1,0 +1,139 @@
+# Copyright Siemens 2022
+
+{{- if .Values.database.host }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+spec:
+  ports:
+    - protocol: TCP
+      port: {{ .Values.database.port }}
+      targetPort: {{ .Values.database.port }}
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: db
+subsets:
+  - addresses:
+      - ip: {{ .Values.database.host }}
+    ports:
+      - port: {{ .Values.database.port }}
+---
+{{- end}}
+{{- if .Values.licenseServer.host }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: license-server
+spec:
+  ports:
+    - protocol: TCP
+      name: primary
+      port: 28000
+      targetPort: 28000
+    - protocol: TCP
+      name: ugslmd
+      port: 28001
+      targetPort: 28001
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: license-server
+subsets:
+  - addresses:
+      - ip: {{ .Values.licenseServer.host }}
+    ports:
+      - port: 28000
+        name: primary
+      - port: 28001
+        name: ugslmd
+---
+{{- end}}
+{{- if .Values.ldapServer.host }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: ldap-server
+spec:
+  ports:
+    - protocol: TCP
+      name: ldap
+      port: 389
+      targetPort: 389
+    - protocol: TCP
+      name: ldaps
+      port: 636
+      targetPort: 636
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: ldap-server
+subsets:
+  - addresses:
+      - ip: {{ .Values.ldapServer.host }}
+    ports:
+      - port: 389
+        name: ldap
+      - port: 636
+        name: ldaps
+---
+{{- end}}
+{{- if .Values.odsDatabase.port}}
+{{- if .Values.odsDatabase.host }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ods-db
+spec:
+  ports:
+    - protocol: TCP
+      port: {{ .Values.odsDatabase.port }}
+      targetPort: {{ .Values.odsDatabase.port }}
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: ods-db
+subsets:
+  - addresses:
+      - ip: {{ .Values.odsDatabase.host }}
+    ports:
+      - port: {{ .Values.odsDatabase.port }}
+---
+{{- end}}
+{{- end}}
+{{- if .Values.saltLicenseServer.host }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: salt-license-server
+spec:
+  ports:
+    - protocol: TCP
+      name: primary
+      port: 29000
+      targetPort: 29000
+    - protocol: TCP
+      name: saltd
+      port: 29001
+      targetPort: 29001
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: salt-license-server
+subsets:
+  - addresses:
+      - ip: {{ .Values.saltLicenseServer.host }}
+    ports:
+      - port: 29000
+        name: primary
+      - port: 29001
+        name: saltd
+---
+{{- end}}
