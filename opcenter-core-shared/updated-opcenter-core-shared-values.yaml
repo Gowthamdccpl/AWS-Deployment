@@ -8,7 +8,7 @@ odsdatabase:
   enabled: true
   host: 100.26.162.7
   # port: 1433
-  port : 1433
+  port : 1433    # just a comment ......
 
 saltLicenseServer:
   # host: 172.1.1.3
