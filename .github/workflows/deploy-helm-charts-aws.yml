@@ -1,6 +1,7 @@
-name: Deploy changed Helm charts to AWS
+name: Fresh deploy Helm charts to AWS
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -30,7 +31,7 @@ env:
 
 jobs:
   deploy:
-    name: Deploy changed charts
+    name: Fresh deploy all charts
     runs-on: ubuntu-latest
 
     steps:
@@ -60,17 +61,44 @@ jobs:
           echo "${{ secrets.KUBE_CONFIG }}" | base64 --decode > "$HOME/.kube/config"
           chmod 600 "$HOME/.kube/config"
 
-      - name: Detect changed charts
-        id: changed-charts
+      - name: Uninstall existing releases
         shell: bash
         run: |
           set -euo pipefail
 
-          if [[ "${{ github.event.before }}" == "0000000000000000000000000000000000000000" ]]; then
-            changed_files="$(git diff-tree --no-commit-id --name-only -r HEAD)"
-          else
-            changed_files="$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}")"
-          fi
+          release_names=(
+            "opcenter-core"
+            "opcenter-dbupdate"
+            "opcenter-core-dbupdate"
+            "dev-opcenter-config"
+            "opcenter-core-shared"
+            "opcenter-shared"
+          )
+
+          namespaces=(
+            "$OPCENTER_NAMESPACE"
+            "$OPCENTER_NAMESPACE"
+            "$OPCENTER_NAMESPACE"
+            "$OPCENTER_NAMESPACE"
+            "$SHARED_NAMESPACE"
+            "$SHARED_NAMESPACE"
+          )
+
+          for i in "${!release_names[@]}"; do
+            release_name="${release_names[$i]}"
+            namespace="${namespaces[$i]}"
+
+            if helm status "$release_name" -n "$namespace" >/dev/null 2>&1; then
+              helm uninstall "$release_name" -n "$namespace" --wait --timeout 10m
+            else
+              echo "Release $release_name not found in namespace $namespace; skipping uninstall."
+            fi
+          done
+
+      - name: Deploy all charts
+        shell: bash
+        run: |
+          set -euo pipefail
 
           chart_dirs=(
             "opcenter-core-shared"
@@ -79,53 +107,35 @@ jobs:
             "opcenter-core"
           )
 
-          changed_charts=()
-          for chart_dir in "${chart_dirs[@]}"; do
-            if grep -qE "^${chart_dir}/" <<< "$changed_files"; then
-              changed_charts+=("$chart_dir")
-            fi
-          done
+          release_names=(
+            "opcenter-shared"
+            "dev-opcenter-config"
+            "opcenter-core-dbupdate"
+            "opcenter-core"
+          )
 
-          {
-            echo "charts<<EOF"
-            printf "%s\n" "${changed_charts[@]}"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
+          namespaces=(
+            "$SHARED_NAMESPACE"
+            "$OPCENTER_NAMESPACE"
+            "$OPCENTER_NAMESPACE"
+            "$OPCENTER_NAMESPACE"
+          )
 
-      - name: Deploy changed charts
-        if: steps.changed-charts.outputs.charts != ''
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          while IFS= read -r chart_dir; do
-            [[ -z "$chart_dir" ]] && continue
-
-            release_name="$(awk -F ': *' '$1 == "name" { print $2; exit }' "$chart_dir/Chart.yaml")"
+          for i in "${!chart_dirs[@]}"; do
+            chart_dir="${chart_dirs[$i]}"
+            release_name="${release_names[$i]}"
+            namespace="${namespaces[$i]}"
             values_file="$chart_dir/updated-${chart_dir}-values.yaml"
-            namespace="$OPCENTER_NAMESPACE"
             extra_values_args=()
 
             if [[ ! -f "$values_file" ]]; then
               values_file="$chart_dir/values.yaml"
             fi
 
-            if [[ "$chart_dir" == "opcenter-core-shared" ]]; then
-              release_name="opcenter-shared"
-              namespace="$SHARED_NAMESPACE"
-            fi
-
-            if [[ "$chart_dir" == "opcenter-core-config" ]]; then
-              release_name="dev-opcenter-config"
-            fi
-
             if [[ "$chart_dir" == "opcenter-core-config" || "$chart_dir" == "opcenter-core-dbupdate" ]]; then
               if [[ -n "$OPCENTER_DB_PASSWORD" ]]; then
                 db_secret_values_file="$RUNNER_TEMP/${chart_dir}-db-secret-values.yaml"
-                cat > "$db_secret_values_file" <<EOF
-          database:
-            password: "$OPCENTER_DB_PASSWORD"
-          EOF
+                printf 'database:\n  password: "%s"\n' "$OPCENTER_DB_PASSWORD" > "$db_secret_values_file"
                 extra_values_args+=(--values "$db_secret_values_file")
               fi
             fi
@@ -161,7 +171,7 @@ jobs:
               extra_values_args+=(--values "$windows_values_file")
             fi
 
-            helm lint "$chart_dir" --values "$values_file"
+            helm lint "$chart_dir" --values "$values_file" "${extra_values_args[@]}"
 
             helm upgrade --install "$release_name" "$chart_dir" \
               -n "$namespace" \
@@ -170,8 +180,4 @@ jobs:
               "${extra_values_args[@]}" \
               --wait \
               --timeout 10m
-          done <<< "${{ steps.changed-charts.outputs.charts }}"
-
-      - name: No chart changes
-        if: steps.changed-charts.outputs.charts == ''
-        run: echo "No Helm chart directory changes detected."
+          done
