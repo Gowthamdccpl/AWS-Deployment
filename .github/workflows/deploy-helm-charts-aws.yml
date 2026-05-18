@@ -23,6 +23,7 @@ env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   SHARED_NAMESPACE: shared
   OPCENTER_NAMESPACE: dev-opcenter
+  OPCENTER_METADATA_PVC: opcenter-metadata-pvc-dev-opcenter
   WINDOWS_NODE_SELECTOR_OS_KEY: kubernetes.io/os
   WINDOWS_NODE_SELECTOR_OS_VALUE: windows
   WINDOWS_NODE_SELECTOR_BUILD_KEY: node.kubernetes.io/windows-build
@@ -61,6 +62,62 @@ jobs:
           echo "${{ secrets.KUBE_CONFIG }}" | base64 --decode > "$HOME/.kube/config"
           chmod 600 "$HOME/.kube/config"
 
+      - name: Preserve existing metadata PV and PVC
+        id: preserve_storage
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          pvc_backup="$RUNNER_TEMP/${OPCENTER_METADATA_PVC}.json"
+          pv_backup="$RUNNER_TEMP/${OPCENTER_METADATA_PVC}-pv.json"
+
+          if ! kubectl get pvc "$OPCENTER_METADATA_PVC" -n "$OPCENTER_NAMESPACE"; then
+            echo "Existing PVC $OPCENTER_METADATA_PVC was not found in namespace $OPCENTER_NAMESPACE."
+            echo "This workflow expects the metadata PVC to exist before fresh redeploy."
+            echo "preserved=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          pvc_phase="$(kubectl get pvc "$OPCENTER_METADATA_PVC" -n "$OPCENTER_NAMESPACE" -o jsonpath='{.status.phase}')"
+          if [[ "$pvc_phase" != "Bound" ]]; then
+            echo "Existing PVC $OPCENTER_METADATA_PVC is $pvc_phase, expected Bound."
+            exit 1
+          fi
+
+          pv_name="$(kubectl get pvc "$OPCENTER_METADATA_PVC" -n "$OPCENTER_NAMESPACE" -o jsonpath='{.spec.volumeName}')"
+
+          kubectl get pvc "$OPCENTER_METADATA_PVC" -n "$OPCENTER_NAMESPACE" -o json \
+            | jq 'del(
+                .metadata.annotations["kubectl.kubernetes.io/last-applied-configuration"],
+                .metadata.creationTimestamp,
+                .metadata.resourceVersion,
+                .metadata.uid,
+                .metadata.managedFields,
+                .metadata.finalizers,
+                .metadata.ownerReferences,
+                .status
+              )' > "$pvc_backup"
+
+          if [[ -n "$pv_name" ]]; then
+            kubectl get pv "$pv_name" -o json \
+              | jq 'del(
+                  .metadata.annotations["kubectl.kubernetes.io/last-applied-configuration"],
+                  .metadata.creationTimestamp,
+                  .metadata.resourceVersion,
+                  .metadata.uid,
+                  .metadata.managedFields,
+                  .metadata.finalizers,
+                  .metadata.ownerReferences,
+                  .spec.claimRef,
+                  .status
+                )' > "$pv_backup"
+          fi
+
+          echo "preserved=true" >> "$GITHUB_OUTPUT"
+          echo "pv_name=$pv_name" >> "$GITHUB_OUTPUT"
+          echo "pvc_backup=$pvc_backup" >> "$GITHUB_OUTPUT"
+          echo "pv_backup=$pv_backup" >> "$GITHUB_OUTPUT"
+
       - name: Uninstall existing releases
         shell: bash
         run: |
@@ -94,6 +151,38 @@ jobs:
               echo "Release $release_name not found in namespace $namespace; skipping uninstall."
             fi
           done
+
+      - name: Restore existing metadata PV and PVC
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ steps.preserve_storage.outputs.preserved }}" != "true" ]]; then
+            echo "No existing metadata PVC was preserved, so the fresh deploy cannot continue."
+            echo "Restore $OPCENTER_METADATA_PVC in namespace $OPCENTER_NAMESPACE and rerun this workflow."
+            exit 1
+          fi
+
+          pv_backup="${{ steps.preserve_storage.outputs.pv_backup }}"
+          pvc_backup="${{ steps.preserve_storage.outputs.pvc_backup }}"
+
+          if [[ -s "$pv_backup" ]]; then
+            kubectl apply -f "$pv_backup"
+          fi
+
+          kubectl apply -f "$pvc_backup"
+
+          if ! kubectl get pvc "$OPCENTER_METADATA_PVC" -n "$OPCENTER_NAMESPACE"; then
+            echo "Existing PVC $OPCENTER_METADATA_PVC was not found in namespace $OPCENTER_NAMESPACE."
+            echo "Restore this PVC before running the fresh deploy workflow."
+            exit 1
+          fi
+
+          pvc_phase="$(kubectl get pvc "$OPCENTER_METADATA_PVC" -n "$OPCENTER_NAMESPACE" -o jsonpath='{.status.phase}')"
+          if [[ "$pvc_phase" != "Bound" ]]; then
+            echo "Existing PVC $OPCENTER_METADATA_PVC is $pvc_phase, expected Bound."
+            exit 1
+          fi
 
       - name: Deploy all charts
         shell: bash
