@@ -63,7 +63,7 @@ resource "aws_datasync_location_s3" "seed_source" {
   count = local.enable_s3_to_fsx_seed ? 1 : 0
 
   s3_bucket_arn = local.s3_seed_bucket_arn
-  subdirectory  = local.s3_seed_subdirectory
+  subdirectory  = local.s3_seed_subdirectory != null ? local.s3_seed_subdirectory : "/"
 
   s3_config {
     bucket_access_role_arn = aws_iam_role.datasync_s3_access[0].arn
