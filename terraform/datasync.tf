@@ -103,7 +103,7 @@ resource "aws_datasync_task" "s3_to_fsx" {
     posix_permissions              = "NONE"
     preserve_deleted_files         = "PRESERVE"
     preserve_devices               = "NONE"
-    security_descriptor_copy_flags = "OWNER_DACL"
+    security_descriptor_copy_flags = "NONE"
     task_queueing                  = "ENABLED"
     transfer_mode                  = "CHANGED"
     uid                            = "NONE"
