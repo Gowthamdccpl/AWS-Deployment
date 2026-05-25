@@ -52,6 +52,7 @@ env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   TF_DIR: terraform
   TF_INPUT: "false"
+  TF_RESOURCE_NAME: opcenter-dev
   TF_STATE_KEY: opcenter-dev/terraform.tfstate
   SHARED_NAMESPACE: shared
   OPCENTER_NAMESPACE: dev-opcenter
@@ -138,6 +139,58 @@ jobs:
       - name: Terraform validate
         working-directory: ${{ env.TF_DIR }}
         run: terraform validate
+
+      - name: Import existing partial resources
+        working-directory: ${{ env.TF_DIR }}
+        shell: bash
+        env:
+          TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
+          TF_VAR_s3_seed_bucket_name: opcenter-files
+          TF_VAR_s3_seed_prefix: ${{ github.event.inputs.s3_seed_prefix || '' }}
+          TF_VAR_fsx_share_name: ${{ github.event.inputs.fsx_share_name || 'share' }}
+          TF_VAR_fsx_seed_subdirectory: ${{ github.event.inputs.fsx_seed_subdirectory || '' }}
+        run: |
+          set -euo pipefail
+
+          import_if_missing() {
+            local address="$1"
+            local id="$2"
+
+            if terraform state show "$address" >/dev/null 2>&1; then
+              echo "Terraform state already has $address; skipping import."
+              return 0
+            fi
+
+            terraform import "$address" "$id"
+          }
+
+          if aws secretsmanager describe-secret --secret-id "${TF_RESOURCE_NAME}/rds/master" >/dev/null 2>&1; then
+            import_if_missing "aws_secretsmanager_secret.rds" "${TF_RESOURCE_NAME}/rds/master"
+          fi
+
+          if aws secretsmanager describe-secret --secret-id "${TF_RESOURCE_NAME}/ad/admin" >/dev/null 2>&1; then
+            import_if_missing "aws_secretsmanager_secret.ad" "${TF_RESOURCE_NAME}/ad/admin"
+          fi
+
+          if aws secretsmanager describe-secret --secret-id "${TF_RESOURCE_NAME}/opcenter/db" >/dev/null 2>&1; then
+            import_if_missing "aws_secretsmanager_secret.opcenter_db" "${TF_RESOURCE_NAME}/opcenter/db"
+          fi
+
+          if aws iam get-role --role-name "${TF_RESOURCE_NAME}-datasync-s3-access" >/dev/null 2>&1; then
+            import_if_missing 'aws_iam_role.datasync_s3_access[0]' "${TF_RESOURCE_NAME}-datasync-s3-access"
+          fi
+
+          if aws iam get-role-policy --role-name "${TF_RESOURCE_NAME}-datasync-s3-access" --policy-name "${TF_RESOURCE_NAME}-datasync-s3-access" >/dev/null 2>&1; then
+            import_if_missing 'aws_iam_role_policy.datasync_s3_access[0]' "${TF_RESOURCE_NAME}-datasync-s3-access:${TF_RESOURCE_NAME}-datasync-s3-access"
+          fi
+
+          if aws rds describe-db-subnet-groups --db-subnet-group-name "${TF_RESOURCE_NAME}-db-subnets" >/dev/null 2>&1; then
+            import_if_missing "module.rds.aws_db_subnet_group.this" "${TF_RESOURCE_NAME}-db-subnets"
+          fi
+
+          if aws kms describe-key --key-id "alias/eks/${TF_RESOURCE_NAME}-eks" >/dev/null 2>&1; then
+            import_if_missing 'module.eks.module.kms.aws_kms_alias.this["cluster"]' "alias/eks/${TF_RESOURCE_NAME}-eks"
+          fi
 
       - name: Terraform plan
         working-directory: ${{ env.TF_DIR }}
