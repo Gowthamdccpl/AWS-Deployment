@@ -5,9 +5,9 @@ data "aws_rds_engine_version" "selected" {
 }
 
 resource "aws_db_subnet_group" "this" {
-  name       = "${var.name}-db-subnets"
-  subnet_ids = var.subnet_ids
-  tags       = var.tags
+  name_prefix = "${var.name}-db-subnets-"
+  subnet_ids  = var.subnet_ids
+  tags        = var.tags
 }
 
 resource "aws_security_group" "db" {

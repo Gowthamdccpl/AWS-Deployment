@@ -66,6 +66,7 @@ module "eks" {
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
 
+  endpoint_public_access      = true
   enable_irsa                 = true
   create_cloudwatch_log_group = false
 
@@ -77,11 +78,12 @@ module "eks" {
 
   eks_managed_node_groups = {
     linux-ng = {
-      desired_size   = 1
-      min_size       = 1
-      max_size       = 1
-      instance_types = ["t3.medium"]
-      ami_type       = "AL2023_x86_64_STANDARD"
+      desired_size               = 1
+      min_size                   = 1
+      max_size                   = 1
+      instance_types             = ["t3.medium"]
+      ami_type                   = "AL2023_x86_64_STANDARD"
+      use_custom_launch_template = false
       labels = {
         lifecycle = "normal"
       }
