@@ -164,16 +164,19 @@ jobs:
             terraform import "$address" "$id"
           }
 
-          if aws secretsmanager describe-secret --secret-id "${TF_RESOURCE_NAME}/rds/master" >/dev/null 2>&1; then
-            import_if_missing "aws_secretsmanager_secret.rds" "${TF_RESOURCE_NAME}/rds/master"
+          rds_secret_arn="$(aws secretsmanager describe-secret --secret-id "${TF_RESOURCE_NAME}/rds/master" --query ARN --output text 2>/dev/null || true)"
+          if [[ -n "$rds_secret_arn" && "$rds_secret_arn" != "None" ]]; then
+            import_if_missing "aws_secretsmanager_secret.rds" "$rds_secret_arn"
           fi
 
-          if aws secretsmanager describe-secret --secret-id "${TF_RESOURCE_NAME}/ad/admin" >/dev/null 2>&1; then
-            import_if_missing "aws_secretsmanager_secret.ad" "${TF_RESOURCE_NAME}/ad/admin"
+          ad_secret_arn="$(aws secretsmanager describe-secret --secret-id "${TF_RESOURCE_NAME}/ad/admin" --query ARN --output text 2>/dev/null || true)"
+          if [[ -n "$ad_secret_arn" && "$ad_secret_arn" != "None" ]]; then
+            import_if_missing "aws_secretsmanager_secret.ad" "$ad_secret_arn"
           fi
 
-          if aws secretsmanager describe-secret --secret-id "${TF_RESOURCE_NAME}/opcenter/db" >/dev/null 2>&1; then
-            import_if_missing "aws_secretsmanager_secret.opcenter_db" "${TF_RESOURCE_NAME}/opcenter/db"
+          opcenter_db_secret_arn="$(aws secretsmanager describe-secret --secret-id "${TF_RESOURCE_NAME}/opcenter/db" --query ARN --output text 2>/dev/null || true)"
+          if [[ -n "$opcenter_db_secret_arn" && "$opcenter_db_secret_arn" != "None" ]]; then
+            import_if_missing "aws_secretsmanager_secret.opcenter_db" "$opcenter_db_secret_arn"
           fi
 
           if aws iam get-role --role-name "${TF_RESOURCE_NAME}-datasync-s3-access" >/dev/null 2>&1; then
