@@ -1,7 +1,7 @@
 locals {
   enable_s3_to_fsx_seed = var.s3_seed_bucket_name != ""
   s3_seed_subdirectory  = var.s3_seed_prefix == "" ? null : "/${trim(var.s3_seed_prefix, "/")}"
-  fsx_seed_subdirectory = var.fsx_seed_subdirectory == "" ? null : "/${trim(var.fsx_seed_subdirectory, "/")}"
+  fsx_seed_share_path   = "/${var.fsx_share_name}"
   s3_seed_bucket_arn    = "arn:aws:s3:::${var.s3_seed_bucket_name}"
   s3_seed_objects_arn   = var.s3_seed_prefix == "" ? "${local.s3_seed_bucket_arn}/*" : "${local.s3_seed_bucket_arn}/${trim(var.s3_seed_prefix, "/")}/*"
 }
@@ -82,7 +82,7 @@ resource "aws_datasync_location_fsx_windows_file_system" "seed_destination" {
   user         = "Admin"
   password     = local.ad_admin_password
   domain       = local.ad_domain
-  subdirectory = local.fsx_seed_subdirectory
+  subdirectory = local.fsx_seed_share_path
 
   tags = var.tags
 }

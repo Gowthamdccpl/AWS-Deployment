@@ -10,3 +10,9 @@ kubeconfig
 # Local generated deployment files
 *-values.local.yaml
 *-dbcreate-values.yaml
+
+# Terraform local state and working files
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
