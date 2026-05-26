@@ -61,7 +61,7 @@ module "eks" {
   version = "~> 21.3"
 
   name               = "${var.name}-eks"
-  kubernetes_version = "1.35"
+  kubernetes_version = "1.32"
 
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
@@ -87,9 +87,12 @@ module "eks" {
       labels = {
         lifecycle = "normal"
       }
-      additional_iam_policies = [
-        "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-      ]
+      # additional_iam_policies = [
+      #   "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+      # ]
+      iam_role_additional_policies = {
+        ssm = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+      }
       timeouts = {
         create = "60m"
         update = "60m"
