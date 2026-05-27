@@ -96,11 +96,11 @@ module "eks" {
 
   eks_managed_node_groups = {
     linux-ng = {
-      desired_size               = 1
-      min_size                   = 1
-      max_size                   = 1
-      instance_types             = ["t3.medium"]
-      ami_type                   = "AL2023_x86_64"
+      desired_size   = 1
+      min_size       = 1
+      max_size       = 1
+      instance_types = ["t3.medium"]
+      ami_type       = "AL2023_x86_64"
       # use_custom_launch_template = false
       labels = {
         lifecycle = "normal"
