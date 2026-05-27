@@ -124,7 +124,7 @@ module "eks" {
       min_size       = 1
       max_size       = 1
       instance_types = ["m5.xlarge"]
-      ami_type       = "WINDOWS_CORE_2019_x86_64"
+      ami_type       = "WINDOWS_CORE_2022_x86_64"
       timeouts = {
         create = "60m"
         update = "60m"
