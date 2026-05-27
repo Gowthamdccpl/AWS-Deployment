@@ -100,7 +100,7 @@ module "eks" {
       min_size       = 1
       max_size       = 1
       instance_types = ["t3.medium"]
-      ami_type       = "AL2023_x86_64"
+      ami_type       = "AL2_x86_64"
       # use_custom_launch_template = false
       labels = {
         lifecycle = "normal"
