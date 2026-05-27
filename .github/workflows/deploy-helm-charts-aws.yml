@@ -222,7 +222,10 @@ jobs:
           echo "fsx_share_name=$(terraform output -raw fsx_share_name)" >> "$GITHUB_OUTPUT"
           echo "opcenter_db_secret_name=$(terraform output -raw opcenter_db_secret_name)" >> "$GITHUB_OUTPUT"
           echo "ad_admin_secret_name=$(terraform output -raw ad_admin_secret_name)" >> "$GITHUB_OUTPUT"
-          echo "datasync_task_arn=$(terraform output -raw datasync_task_arn)" >> "$GITHUB_OUTPUT"
+
+          datasync_task_arn="$(terraform output -raw datasync_task_arn)"
+          echo "DataSync task ARN: $datasync_task_arn"
+          echo "datasync_task_arn=$datasync_task_arn" >> "$GITHUB_OUTPUT"
 
   approve_redeploy:
     name: Manual approval before Helm uninstall
@@ -268,15 +271,23 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Copy S3 seed files to FSx
-        if: ${{ needs.terraform_apply.outputs.datasync_task_arn != '' }}
         shell: bash
         env:
           DATASYNC_TASK_ARN: ${{ needs.terraform_apply.outputs.datasync_task_arn }}
         run: |
           set -euo pipefail
 
+          if [[ -z "$DATASYNC_TASK_ARN" ]]; then
+            echo "Terraform did not output a DataSync task ARN, so S3 files cannot be copied to FSx."
+            echo "Check that TF_VAR_s3_seed_bucket_name is set and aws_datasync_task.s3_to_fsx exists."
+            exit 1
+          fi
+
+          echo "Starting DataSync task: $DATASYNC_TASK_ARN"
+
           task_execution_arn="$(aws datasync start-task-execution \
             --task-arn "$DATASYNC_TASK_ARN" \
+            --region "$AWS_REGION" \
             --query "TaskExecutionArn" \
             --output text)"
 
@@ -285,6 +296,7 @@ jobs:
           while true; do
             status="$(aws datasync describe-task-execution \
               --task-execution-arn "$task_execution_arn" \
+              --region "$AWS_REGION" \
               --query "Status" \
               --output text)"
 
@@ -297,6 +309,7 @@ jobs:
               ERROR)
                 aws datasync describe-task-execution \
                   --task-execution-arn "$task_execution_arn" \
+                  --region "$AWS_REGION" \
                   --output json
                 exit 1
                 ;;
@@ -314,6 +327,21 @@ jobs:
           aws eks update-kubeconfig \
             --region "$AWS_REGION" \
             --name "${{ needs.terraform_apply.outputs.eks_cluster_name }}"
+
+      - name: Install SMB CSI driver
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          helm repo add csi-driver-smb https://raw.githubusercontent.com/kubernetes-csi/csi-driver-smb/master/charts
+          helm repo update
+
+          helm upgrade --install csi-driver-smb csi-driver-smb/csi-driver-smb \
+            --namespace kube-system \
+            --version v1.15.0 \
+            --set windows.enabled=true
+
+          kubectl get csidriver smb.csi.k8s.io
 
       - name: Create Terraform-generated Helm values
         shell: bash

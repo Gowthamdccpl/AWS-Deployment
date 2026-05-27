@@ -1,7 +1,7 @@
 locals {
   enable_s3_to_fsx_seed = var.s3_seed_bucket_name != ""
   s3_seed_subdirectory  = var.s3_seed_prefix == "" ? null : "/${trim(var.s3_seed_prefix, "/")}"
-  fsx_seed_share_path   = "/${var.fsx_share_name}"
+  fsx_seed_share_path   = "/${var.fsx_share_name}/"
   s3_seed_bucket_arn    = "arn:aws:s3:::${var.s3_seed_bucket_name}"
   s3_seed_objects_arn   = var.s3_seed_prefix == "" ? "${local.s3_seed_bucket_arn}/*" : "${local.s3_seed_bucket_arn}/${trim(var.s3_seed_prefix, "/")}/*"
 }
