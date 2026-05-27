@@ -223,7 +223,16 @@ jobs:
           echo "opcenter_db_secret_name=$(terraform output -raw opcenter_db_secret_name)" >> "$GITHUB_OUTPUT"
           echo "ad_admin_secret_name=$(terraform output -raw ad_admin_secret_name)" >> "$GITHUB_OUTPUT"
 
-          datasync_task_arn="$(terraform output -raw datasync_task_arn)"
+          datasync_task_arn="$(terraform output -raw datasync_task_arn || true)"
+          if [[ -z "$datasync_task_arn" ]]; then
+            datasync_task_arn="$(aws datasync list-tasks \
+              --region "$AWS_REGION" \
+              --query "Tasks[?Name=='${TF_RESOURCE_NAME}-s3-to-fsx-seed'].TaskArn | [0]" \
+              --output text)"
+          fi
+          if [[ "$datasync_task_arn" == "None" ]]; then
+            datasync_task_arn=""
+          fi
           echo "DataSync task ARN: $datasync_task_arn"
           echo "datasync_task_arn=$datasync_task_arn" >> "$GITHUB_OUTPUT"
 
@@ -278,8 +287,16 @@ jobs:
           set -euo pipefail
 
           if [[ -z "$DATASYNC_TASK_ARN" ]]; then
-            echo "Terraform did not output a DataSync task ARN, so S3 files cannot be copied to FSx."
-            echo "Check that TF_VAR_s3_seed_bucket_name is set and aws_datasync_task.s3_to_fsx exists."
+            echo "Terraform did not output a DataSync task ARN. Looking up the task by name."
+            DATASYNC_TASK_ARN="$(aws datasync list-tasks \
+              --region "$AWS_REGION" \
+              --query "Tasks[?Name=='${TF_RESOURCE_NAME}-s3-to-fsx-seed'].TaskArn | [0]" \
+              --output text)"
+          fi
+
+          if [[ -z "$DATASYNC_TASK_ARN" || "$DATASYNC_TASK_ARN" == "None" ]]; then
+            echo "No DataSync task ARN was found, so S3 files cannot be copied to FSx."
+            echo "Check that TF_VAR_s3_seed_bucket_name is set and the ${TF_RESOURCE_NAME}-s3-to-fsx-seed task exists."
             exit 1
           fi
 
