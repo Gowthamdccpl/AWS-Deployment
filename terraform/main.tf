@@ -66,9 +66,27 @@ module "eks" {
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
 
-  endpoint_public_access      = true
-  enable_irsa                 = true
-  create_cloudwatch_log_group = false
+  endpoint_public_access                   = true
+  enable_irsa                              = true
+  enable_cluster_creator_admin_permissions = true
+  create_cloudwatch_log_group              = false
+
+  addons = {
+    coredns = {
+      most_recent = true
+    }
+    eks-pod-identity-agent = {
+      before_compute = true
+      most_recent    = true
+    }
+    kube-proxy = {
+      most_recent = true
+    }
+    vpc-cni = {
+      before_compute = true
+      most_recent    = true
+    }
+  }
 
   timeouts = {
     create = "60m"
@@ -82,8 +100,8 @@ module "eks" {
       min_size                   = 1
       max_size                   = 1
       instance_types             = ["t3.medium"]
-      ami_type                   = "AL2023_x86_64_STANDARD"
-      use_custom_launch_template = false
+      ami_type                   = "AL2023_x86_64"
+      # use_custom_launch_template = false
       labels = {
         lifecycle = "normal"
       }
